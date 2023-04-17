@@ -1,6 +1,6 @@
 import pytest
 from pymilvus import Milvus, connections
-from vectordb_orm.base import MilvusSession, Embedding
+from vectordb_orm import MilvusSession, Embedding
 from vectordb_orm.tests.models import MyObject
 
 milvus_client = Milvus()
@@ -28,12 +28,13 @@ def test_query():
     collection.load()  
 
     # Test a simple filter and similarity ranking
-    results = session.query(MyObject).filter(MyObject.text == 'bar').similarity_ranking(MyObject.embedding, Embedding([1.0]*128), top_k=2)
+    print("result", session.query(MyObject).filter(MyObject.text == 'bar').order_by_similarity(MyObject.embedding, Embedding([1.0]*128)).limit(2))
+    results = session.query(MyObject).filter(MyObject.text == 'bar').order_by_similarity(MyObject.embedding, Embedding([1.0]*128)).limit(2).all()
     assert len(results) == 1
     assert results[0].result.id == obj2.id
 
     # Test a more complex filter and similarity ranking
-    results = session.query(MyObject).filter(MyObject.text == 'baz', MyObject.id > 1).similarity_ranking(MyObject.embedding, Embedding([8.0]*128), top_k=2)
+    results = session.query(MyObject).filter(MyObject.text == 'baz', MyObject.id > 1).order_by_similarity(MyObject.embedding, Embedding([8.0]*128)).limit(2).all()
     assert len(results) == 1
     assert results[0].result.id == obj3.id
 

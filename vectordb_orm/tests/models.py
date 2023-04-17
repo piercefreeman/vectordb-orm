@@ -1,4 +1,4 @@
-from vectordb_orm.base import MilvusBase, Embedding
+from vectordb_orm import MilvusBase, Embedding
 from pymilvus import Milvus
 
 class MyObject(MilvusBase, milvus_client=Milvus()):
