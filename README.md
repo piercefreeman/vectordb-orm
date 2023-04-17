@@ -1,2 +1,2 @@
-# weaviate-orm
-A small ORM wrapper for weaviate
+# vectordb-orm
+A small ORM wrapper for vector databases, starting with milvus.
