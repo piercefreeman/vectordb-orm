@@ -3,7 +3,7 @@ from pymilvus.client.abstract import ChunkedQueryResult
 from vectordb_orm.attributes import AttributeCompare
 from vectordb_orm.results import QueryResult
 from vectordb_orm.fields import EmbeddingField
-from vectordb_orm.base import MilvusBase
+from vectordb_orm.base import MilvusBase, type_to_value
 from typing import Any
 
 # https://milvus.io/docs/search.md
@@ -74,9 +74,15 @@ class MilvusQueryBuilder:
         limit = self._limit if self._limit is not None else (MAX_MILVUS_INT - offset)
 
         if self._similarity_attribute is not None:
-            query_records = [self._similarity_value]
             embedding_field_name = self._similarity_attribute.attr
-            embedding_configuration : EmbeddingField = self.cls._type_configuration.get(self._similarity_attribute)
+            embedding_configuration : EmbeddingField = self.cls._type_configuration.get(self._similarity_attribute.attr)
+
+            # Go through the same type conversion as the embedding field during insert time
+            _, similarity_value = type_to_value(
+                self.cls.__annotations__[embedding_field_name],
+                self._similarity_value,
+            )
+            query_records = [similarity_value]
 
             search_result = self.milvus_client.search(
                 data=query_records,
