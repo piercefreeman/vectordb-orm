@@ -25,7 +25,6 @@ docker-compose up -d
 
 ```python
 from vectordb_orm import MilvusBase, EmbeddingField, VarCharField, PrimaryKeyField
-from pymilvus import Milvus
 from vectordb_orm.indexes import IVF_FLAT
 import numpy as np
 

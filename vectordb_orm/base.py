@@ -66,10 +66,6 @@ class MilvusBase(metaclass=MilvusBaseMeta):
         return self.__collection_name__
 
     @classmethod
-    def embedding_dim(cls) -> int:
-        return cls.__embedding_dim__
-
-    @classmethod
     def _create_collection(cls, milvus_client: Milvus):
         """
         Create a Milvus collection using the given Milvus client.
@@ -103,7 +99,7 @@ class MilvusBase(metaclass=MilvusBaseMeta):
                 index = {
                     "index_type": field_configuration.index.index_type,
                     "metric_type": field_configuration.metric_type.value,
-                    "params": field_configuration.index.get_parameters(),
+                    "params": field_configuration.index.get_index_parameters(),
                 }
                 collection.create_index("embedding", index)
 
