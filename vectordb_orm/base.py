@@ -119,6 +119,17 @@ class MilvusBase(metaclass=MilvusBaseMeta):
         self.id = mutation_result.primary_keys[0]
         return self.id
 
+    def delete(self, milvus_client: Milvus) -> None:
+        if not self.id:
+            raise ValueError("Cannot delete object that hasn't been inserted into the database")
+
+        identifier_key = self._get_primary()
+        # Milvus only supports deleting entities with the `in` conditional; equality doesn't work
+        delete_expression = f"{identifier_key} in [{self.id}]"
+        milvus_client.delete(collection_name=self.collection_name(), expr=delete_expression)
+
+        self.id = None
+
     def _dict_representation(self):
         type_converters = {
             np.ndarray: DataType.FLOAT_VECTOR,
@@ -149,14 +160,19 @@ class MilvusBase(metaclass=MilvusBaseMeta):
         return obj
 
     @classmethod
+    def _get_primary(cls):
+        """
+        If the class has a primary key, return it, otherwise return None
+        """
+        for attribute_name in cls.__annotations__.keys():
+            if isinstance(cls._type_configuration.get(attribute_name), PrimaryKeyField):
+                return attribute_name
+        return None
+
+    @classmethod
     def _assert_has_primary(cls):
         """
         Ensure we have a primary key, this is the only field that's fully required
         """
-        if not any(
-            [
-                isinstance(cls._type_configuration.get(attribute_name), PrimaryKeyField)
-                for attribute_name in cls.__annotations__.keys()
-            ]
-        ):
+        if cls._get_primary() is None:
             raise ValueError(f"Class {cls.__name__} does not have a primary key, specify `PrimaryKeyField` on the class definition.")

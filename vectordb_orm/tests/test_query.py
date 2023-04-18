@@ -4,22 +4,10 @@ from vectordb_orm import MilvusSession
 from vectordb_orm.tests.models import MyObject
 import numpy as np
 
-milvus_client = Milvus()
-session = MilvusSession(milvus_client)
-connections.connect("default", host="localhost", port="19530")
-
-@pytest.fixture()
-def drop_collection():
-    # Wipe the collection
-    milvus_client.drop_collection(MyObject.collection_name())
-
-
-def test_query(drop_collection):
+def test_query(collection, milvus_client: Milvus, session: MilvusSession):
     """
     General test of querying and query chaining
     """
-    collection = MyObject._create_collection(milvus_client)
-
     # Create some MyObject instances
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
     obj2 = MyObject(text="bar", embedding=np.array([4.0] * 128))
@@ -44,13 +32,11 @@ def test_query(drop_collection):
     assert results[0].result.id == obj3.id
 
 
-def test_query_default_ignores_embeddings(drop_collection):
+def test_query_default_ignores_embeddings(collection, milvus_client: Milvus, session: MilvusSession):
     """
     Ensure that querying on the class by default ignores embeddings that are included
     within the type definition.
     """
-    collection = MyObject._create_collection(milvus_client)
-
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
     obj1.insert(milvus_client)
 
@@ -65,12 +51,10 @@ def test_query_default_ignores_embeddings(drop_collection):
     assert result.embedding is None
 
 
-def test_query_with_fields(drop_collection):
+def test_query_with_fields(collection, milvus_client: Milvus, session: MilvusSession):
     """
     Test querying with specific fields
     """
-    collection = MyObject._create_collection(milvus_client)
-
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
     obj1.insert(milvus_client)
 
