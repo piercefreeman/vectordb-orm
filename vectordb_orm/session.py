@@ -6,8 +6,5 @@ class MilvusSession:
     def __init__(self, milvus_client: Milvus):
         self.milvus_client = milvus_client
 
-    def query(self, cls: MilvusBase):
-        # We must load this collection into memory before executing the search
-        #self.milvus_client.load_collection(cls.collection_name())
-
-        return MilvusQueryBuilder(self.milvus_client, cls)
+    def query(self, *query_objects: MilvusBase | MilvusQueryBuilder):
+        return MilvusQueryBuilder(self.milvus_client, *query_objects)

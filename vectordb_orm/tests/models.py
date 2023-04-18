@@ -1,13 +1,16 @@
-from vectordb_orm import MilvusBase, Embedding
+from vectordb_orm import MilvusBase, EmbeddingField, VarCharField, PrimaryKeyField
 from pymilvus import Milvus
+from vectordb_orm.indexes import IVF_FLAT
+import numpy as np
 
 class MyObject(MilvusBase, milvus_client=Milvus()):
-    __embedding_dim__ = 128
-    text: str
-    embedding: Embedding
-    id: int
+    __collection_name__ = 'my_collection'
 
-    def __init__(self, text: str, embedding: Embedding):
+    id: int = PrimaryKeyField()
+    text: str = VarCharField(max_length=128)
+    embedding: np.ndarray = EmbeddingField(dim=128, index=IVF_FLAT(cluster_units=128))
+
+    def __init__(self, text: str, embedding: np.array):
         super().__init__()
         self.text = text
         self.embedding = embedding
@@ -15,7 +18,3 @@ class MyObject(MilvusBase, milvus_client=Milvus()):
 
     def __repr__(self):
         return f"MyObject(id={self.id}, text='{self.text}')"
-
-    @classmethod
-    def collection_name(cls) -> str:
-        return 'my_collection'

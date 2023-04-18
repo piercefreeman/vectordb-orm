@@ -3,9 +3,8 @@ from pymilvus.client.abstract import ChunkedQueryResult
 from vectordb_orm.attributes import AttributeCompare
 from typing import TYPE_CHECKING
 from vectordb_orm.results import QueryResult
-
-if TYPE_CHECKING:
-    from vectordb_orm.base import MilvusBase
+from vectordb_orm.fields import EmbeddingField
+from vectordb_orm.base import MilvusBase
 
 
 class MilvusQueryBuilder:
@@ -13,14 +12,29 @@ class MilvusQueryBuilder:
     Recursive query builder to allow for chaining of queries.
 
     Example:
-        >>> query().filter(MyObject.text == "hello").limit(10).all()
+        >>> query(MyObject).filter(MyObject.text == "hello").limit(10).all()
+        >>> query(MyObject.text).filter(MyObject.text == "hello").limit(10).all()
+        >>> query(MyObject.text, MyObject.embedding).filter(MyObject.text == "hello").limit(10).all()
 
     """
-    def __init__(self, milvus_client: Milvus, cls: "MilvusBase"):
+    def __init__(
+        self,
+        milvus_client: Milvus,
+        *query_objects: MilvusBase | AttributeCompare
+    ):
+        if len(query_objects) == 0:
+            raise ValueError("Must specify at least one query object.")
+
         self.milvus_client = milvus_client
-        self.cls = cls
+        if isinstance(query_objects[0], AttributeCompare):
+            self.cls = query_objects[0].base_cls
+        elif issubclass(query_objects[0], MilvusBase):
+            self.cls = query_objects[0]
+        else:
+            raise ValueError(f"Query object must be of type `MilvusBase` or `AttributeCompare`, got {type(query_objects[0])}")
 
         # Queries created over time
+        self._query_objects = list(query_objects)
         self._filters: list[str] = []
         self._limit : int | None = None
 
@@ -46,7 +60,7 @@ class MilvusQueryBuilder:
 
     def all(self):
         filters = " and ".join(self._filters) if self._filters else None
-        query_records = [self._similarity_value.values] if self._similarity_value else None
+        query_records = [self._similarity_value] if self._similarity_value is not None else None
         embedding_field_name = self._similarity_attribute.attr if self._similarity_attribute else None
 
         params = {"nprobe": 16}
@@ -58,10 +72,28 @@ class MilvusQueryBuilder:
             limit=self._limit,
             collection_name=self.cls.collection_name(),
             expression=filters,
-            # TODO: Exclude embeddings by default
-            output_fields=["id", "text"]
+            output_fields=self._get_output_fields(),
         )
         return self._result_to_objects(search_result)
+
+    def _get_output_fields(self) -> list[str]:
+        """
+        Milvus requires us to specify the fields we're looking for explicitly. We by default ignore
+        the embedding field since it's a lot of data to send over the wire and therefore require
+        users to ask for this explicitly in the query definition.
+
+        """
+        fields : set[str] = set()
+        for query_object in self._query_objects:
+            if isinstance(query_object, AttributeCompare):
+                fields.add(query_object.attr)
+            elif issubclass(query_object, MilvusBase):
+                for attribute_name in self.cls.__annotations__.keys():
+                    field_configuration = self.cls._type_configuration.get(attribute_name)
+                    if field_configuration and isinstance(field_configuration, EmbeddingField):
+                        continue
+                    fields.add(attribute_name)
+        return list(fields)
 
     def _result_to_objects(self, search_result: ChunkedQueryResult):
         query_results : list[QueryResult] = []

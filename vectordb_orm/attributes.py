@@ -1,4 +1,8 @@
 from enum import Enum
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from vectordb_orm.base import MilvusBase
 
 
 class OperationType(Enum):
@@ -21,25 +25,26 @@ class AttributeCompare:
     used to construct the query expression at execution time.
 
     """
-    def __init__(self, attr, value=None, op=None):
+    def __init__(self, base_cls: "MilvusBase", attr: str, value: Any = None, op: OperationType | None = None):
+        self.base_cls = base_cls
         self.attr = attr
         self.value = value
         self.op = op
 
     def __eq__(self, other):
-        return AttributeCompare(self.attr, other, OperationType.EQUALS)
+        return AttributeCompare(self.base_cls, self.attr, other, OperationType.EQUALS)
 
     def __gt__(self, other):
-        return AttributeCompare(self.attr, other, OperationType.GREATER_THAN)
+        return AttributeCompare(self.base_cls, self.attr, other, OperationType.GREATER_THAN)
 
     def __lt__(self, other):
-        return AttributeCompare(self.attr, other, OperationType.LESS_THAN)
+        return AttributeCompare(self.base_cls, self.attr, other, OperationType.LESS_THAN)
 
     def __le__(self, other):
-        return AttributeCompare(self.attr, other, OperationType.LESS_THAN_EQUAL)
+        return AttributeCompare(self.base_cls, self.attr, other, OperationType.LESS_THAN_EQUAL)
 
     def __ge__(self, other):
-        return AttributeCompare(self.attr, other, OperationType.GREATER_THAN_EQUAL)
+        return AttributeCompare(self.base_cls, self.attr, other, OperationType.GREATER_THAN_EQUAL)
 
     def to_expression(self):
         value = self.value
