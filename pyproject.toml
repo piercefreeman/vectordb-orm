@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "milvus-orm"
+name = "vectordb-orm"
 version = "0.1.0"
 description = ""
 authors = ["Pierce Freeman <pierce@freeman.vc>"]

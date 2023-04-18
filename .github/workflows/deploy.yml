@@ -1,28 +1,22 @@
-name: CI
+name: Deploy
 
-on: push
+on:
+  push:
+    tags:
+      - v*
 
 jobs:
-  build-and-test:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up Docker Compose
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose
-
-    - name: Build and run Docker Compose
-      run: |
-        docker-compose up -d
-
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.10
+        python-version: "3.10"
 
     - name: Install Poetry
       run: |
@@ -38,6 +32,10 @@ jobs:
         poetry config virtualenvs.create false
         poetry install
 
-    - name: Run pytest
+    - name: Build package
       run: |
-        poetry run pytest
+        poetry build
+
+    - name: Publish package to PyPI
+      run: |
+        poetry publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }}
