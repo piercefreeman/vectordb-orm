@@ -1,10 +1,17 @@
 # vectordb-orm
 
-`vectordb-orm` is an Object-Relational Mapping (ORM) library designed to work with vector databases, such as Milvus. The project aims to provide a consistent and convenient interface for working with vector data, allowing you to interact with vector databases using familiar ORM concepts and syntax.
+`vectordb-orm` is an Object-Relational Mapping (ORM) library designed to work with vector databases. It currently supports Milvus, which is a blazing fast vector search library. This project aims to provide a consistent and convenient interface for working with vector data, allowing you to interact with vector databases using familiar ORM concepts and syntax. More backend engines are planned.
 
 ## Getting Started
 
 Here are some example code snippets demonstrating common behavior with vectordb-orm. vectordb-orm is designed around python typehints. You create a class definition by subclassing `MilvusBase` and providing typehints for the keys of your model, similar to pydantic. These fields also support custom initialization behavior if you want (or need) to modify their configuration options.
+
+Make sure to have a Milvus agent running on your system before connecting. We provide an archive of the [official](https://milvus.io/docs/install_standalone-docker.md) docker-compose that's mainly used for testing.
+
+```bash
+docker-compose up -d
+```
+```
 
 | Field Type      | Description                                                                                                                                                                                                                                |
 |-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -72,4 +79,4 @@ While vectordb-orm is inspired by the widely-used SQLAlchemy ORM, it is specific
 
 ## WIP
 
-Please note that vectordb-orm is still a (somewhat large) work in progress. The current implementation focuses on Milvus integration, the goal is to eventually expand support to other vector databases. Contributions and feedback are welcome as we work to improve and expand the capabilities of vectordb-orm.
+Please note that vectordb-orm is still a (somewhat large) work in progress. The current implementation focuses on Milvus integration; the goal is to eventually expand support to other vector databases. Contributions and feedback are welcome as we work to improve and expand the capabilities of vectordb-orm.
