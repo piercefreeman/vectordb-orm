@@ -1,11 +1,13 @@
 from pymilvus import Milvus
 from pymilvus.client.abstract import ChunkedQueryResult
 from vectordb_orm.attributes import AttributeCompare
-from typing import TYPE_CHECKING
 from vectordb_orm.results import QueryResult
 from vectordb_orm.fields import EmbeddingField
 from vectordb_orm.base import MilvusBase
+from typing import Any
 
+# https://milvus.io/docs/search.md
+MAX_MILVUS_INT = 16384
 
 class MilvusQueryBuilder:
     """
@@ -37,6 +39,7 @@ class MilvusQueryBuilder:
         self._query_objects = list(query_objects)
         self._filters: list[str] = []
         self._limit : int | None = None
+        self._offset : int | None = None
 
         # Set if similarity ranking is used
         self._similarity_attribute : AttributeCompare | None = None
@@ -45,6 +48,10 @@ class MilvusQueryBuilder:
     def filter(self, *filters: AttributeCompare):
         for f in filters:
             self._filters.append(f.to_expression())
+        return self
+
+    def offset(self, offset: int):
+        self._offset = offset
         return self
 
     def limit(self, limit: int | None):
@@ -62,18 +69,33 @@ class MilvusQueryBuilder:
         filters = " and ".join(self._filters) if self._filters else None
         query_records = [self._similarity_value] if self._similarity_value is not None else None
         embedding_field_name = self._similarity_attribute.attr if self._similarity_attribute else None
+        output_fields = self._get_output_fields()
+
+        offset = self._offset if self._offset is not None else 0
+        # Sum of limit and offset should be less than MAX_MILVUS_INT
+        limit = self._limit if self._limit is not None else (MAX_MILVUS_INT - offset)
 
         params = {"nprobe": 16}
 
-        search_result = self.milvus_client.search(
-            data=query_records,
-            anns_field=embedding_field_name,
-            param=params,
-            limit=self._limit,
-            collection_name=self.cls.collection_name(),
-            expression=filters,
-            output_fields=self._get_output_fields(),
-        )
+        if query_records:
+            search_result = self.milvus_client.search(
+                data=query_records,
+                anns_field=embedding_field_name,
+                param=params,
+                limit=limit,
+                offset=offset,
+                collection_name=self.cls.collection_name(),
+                expression=filters,
+                output_fields=output_fields,
+            )
+        else:
+            search_result = self.milvus_client.query(
+                expr=filters,
+                offset=offset,
+                limit=limit,
+                output_fields=output_fields,
+                collection_name=self.cls.collection_name(),
+            )
         return self._result_to_objects(search_result)
 
     def _get_output_fields(self) -> list[str]:
@@ -86,6 +108,9 @@ class MilvusQueryBuilder:
         fields : set[str] = set()
         for query_object in self._query_objects:
             if isinstance(query_object, AttributeCompare):
+                field_configuration = self.cls._type_configuration.get(query_object.attr)
+                if field_configuration and isinstance(field_configuration, EmbeddingField):
+                    raise ValueError("Cannot query for embedding field. Use `order_by_similarity` instead.")
                 fields.add(query_object.attr)
             elif issubclass(query_object, MilvusBase):
                 for attribute_name in self.cls.__annotations__.keys():
@@ -95,13 +120,23 @@ class MilvusQueryBuilder:
                     fields.add(attribute_name)
         return list(fields)
 
-    def _result_to_objects(self, search_result: ChunkedQueryResult):
+    def _result_to_objects(self, search_result: ChunkedQueryResult | list[dict[str, Any]]):
         query_results : list[QueryResult] = []
 
-        for hit in search_result:
-            for result in hit:
-                obj = self.cls(text=result.entity.get("text"), embedding=None)
-                obj.id = result.id
-                query_results.append(QueryResult(obj, result.score, result.distance))
+        if isinstance(search_result, ChunkedQueryResult):
+            for hit in search_result:
+                for result in hit:
+                    entity = {
+                        key: result.entity.get(key)
+                        for key in result.entity.fields
+                    }
+                    print(entity)
+                    print(dir(result.entity))
+                    obj = self.cls.from_dict(entity)
+                    query_results.append(QueryResult(obj, score=result.score, distance=result.distance))
+        else:
+            for result in search_result:
+                obj = self.cls.from_dict(result)
+                query_results.append(QueryResult(obj))
 
         return query_results

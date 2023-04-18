@@ -7,5 +7,7 @@ if TYPE_CHECKING:
 @dataclass
 class QueryResult:
     result: "MilvusBase"
-    score: float
-    distance: float
+
+    # Score and distance is only returned for queries requesting vector-similarity
+    score: float | None = None
+    distance: float | None = None

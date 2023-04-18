@@ -6,6 +6,7 @@ from vectordb_orm.attributes import AttributeCompare
 from vectordb_orm.fields import EmbeddingField, VarCharField, BaseField, PrimaryKeyField
 from typing import Any
 import numpy as np
+from dataclasses import dataclass
 
 
 class MilvusBaseMeta(type):
@@ -17,6 +18,26 @@ class MilvusBaseMeta(type):
 
 class MilvusBase(metaclass=MilvusBaseMeta):
     _type_configuration: dict[str, BaseField]
+
+    def __init__(self, *values: Any, **data: Any) -> None:
+        if values:
+            raise ValueError("Use keyword arguments to initialize a Milvus object.")
+
+        allowed_keys = set(self.__class__.__annotations__.keys())
+
+        for key, value in data.items():
+            if key not in allowed_keys:
+                raise ValueError(f"Unexpected keyword argument '{key}'")
+
+        for key in allowed_keys:
+            if key in data:
+                setattr(self, key, data[key])
+            else:
+                field_configuration = self._type_configuration.get(key)
+                if field_configuration:
+                    setattr(self, key, field_configuration.default)
+                else:
+                    raise ValueError(f"Missing required argument '{key}'")
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__()
@@ -116,6 +137,16 @@ class MilvusBase(metaclass=MilvusBaseMeta):
             for value in [getattr(self, attribute_name)]
             if value is not None
         ]
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        obj = cls()
+        allowed_keys = list(cls.__annotations__.keys())
+        for attribute_name, value in data.items():
+            if attribute_name not in allowed_keys:
+                raise ValueError(f"Key `{attribute_name}` is not allowed on {cls.__name__}")
+            setattr(obj, attribute_name, value)
+        return obj
 
     @classmethod
     def _assert_has_primary(cls):
