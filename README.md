@@ -9,8 +9,9 @@ Here are some example code snippets demonstrating common behavior with vectordb-
 Make sure to have a Milvus agent running on your system before connecting. We provide an archive of the [official](https://milvus.io/docs/install_standalone-docker.md) docker-compose that's mainly used for testing.
 
 ```bash
+git clone https://github.com/piercefreeman/vectordb-orm.git
+cd vectordb-orm
 docker-compose up -d
-```
 ```
 
 | Field Type      | Description                                                                                                                                                                                                                                |
