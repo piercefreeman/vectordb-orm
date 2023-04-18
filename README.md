@@ -2,16 +2,6 @@
 
 `vectordb-orm` is an Object-Relational Mapping (ORM) library designed to work with vector databases, such as Milvus. The project aims to provide a consistent and convenient interface for working with vector data, allowing you to interact with vector databases using familiar ORM concepts and syntax.
 
-## Why use an ORM?
-
-Most vector databases use a JSON-like querying syntax where schemas and objects are specified as dictionary blobs. This makes it difficult to use IDE features like autocomplete or typehinting, and also can lead to error prone code while translating between Python logic and querying syntax.
-
-An ORM provides a high-level, abstracted interface to work with databases. This abstraction makes it easier to write, read, and maintain code, as well as to switch between different database backends with minimal changes. Furthermore, an ORM allows developers to work with databases in a more Pythonic way, using Python objects and classes instead of raw SQL queries or low-level API calls.
-
-## Comparison to SQLAlchemy
-
-While vectordb-orm is inspired by the widely-used SQLAlchemy ORM, it is specifically designed for vector databases, such as Milvus. This means that vectordb-orm offers unique features tailored to the needs of working with vector data, such as similarity search, index management, and efficient data storage. Although the two ORMs share some similarities in terms of syntax and structure, vectordb-orm focuses on providing a seamless experience for working with vector databases.
-
 ## Getting Started
 
 Here are some example code snippets demonstrating common behavior with vectordb-orm. vectordb-orm is designed around python typehints. You create a class definition by subclassing `MilvusBase` and providing typehints for the keys of your model, similar to pydantic. These fields also support custom initialization behavior if you want (or need) to modify their configuration options.
@@ -55,7 +45,7 @@ query_vector = np.array([8.0]*128)
 results = session.query(MyObject).filter(MyObject.text == 'bar').order_by_similarity(MyObject.embedding, query_vector).limit(2).all()
 ```
 
-## Getting started
+## Installation
 
 To get started with vectordb-orm, simply install the package and its dependencies, then import the necessary modules:
 
@@ -69,6 +59,16 @@ We use poetry for local development work:
 poetry install
 poetry run pytest
 ```
+
+## Why use an ORM?
+
+Most vector databases use a JSON-like querying syntax where schemas and objects are specified as dictionary blobs. This makes it difficult to use IDE features like autocomplete or typehinting, and also can lead to error prone code while translating between Python logic and querying syntax.
+
+An ORM provides a high-level, abstracted interface to work with databases. This abstraction makes it easier to write, read, and maintain code, as well as to switch between different database backends with minimal changes. Furthermore, an ORM allows developers to work with databases in a more Pythonic way, using Python objects and classes instead of raw SQL queries or low-level API calls.
+
+## Comparison to SQLAlchemy
+
+While vectordb-orm is inspired by the widely-used SQLAlchemy ORM, it is specifically designed for vector databases, such as Milvus. This means that vectordb-orm offers unique features tailored to the needs of working with vector data, such as similarity search, index management, and efficient data storage. Although the two ORMs share some similarities in terms of syntax and structure, vectordb-orm focuses on providing a seamless experience for working with vector databases.
 
 ## WIP
 

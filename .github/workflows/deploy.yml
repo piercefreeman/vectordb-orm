@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.10"
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Configure Poetry
+      run: |
+        echo "$(python -c 'import os,sys; print(os.path.realpath(sys.executable))')/$(echo $(python -c 'import sys; print(sys.executable)') | rev | cut -d'/' -f1 | rev)" > "$(python -c 'import site; print(site.USER_BASE)')/bin/python"
+        echo "PATH=$(python -c 'import site; print(site.USER_BASE)')/bin:$PATH" >> $GITHUB_ENV
+
+    - name: Install dependencies with Poetry
+      run: |
+        poetry config virtualenvs.create false
+        poetry install
+
+    - name: Build package
+      run: |
+        poetry build
+
+    - name: Publish package to PyPI
+      run: |
+        poetry publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }}
