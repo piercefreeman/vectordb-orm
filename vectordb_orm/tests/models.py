@@ -3,7 +3,7 @@ from pymilvus import Milvus
 from vectordb_orm.indexes import IVF_FLAT
 import numpy as np
 
-class MyObject(MilvusBase, milvus_client=Milvus()):
+class MyObject(MilvusBase):
     __collection_name__ = 'my_collection'
 
     id: int = PrimaryKeyField()

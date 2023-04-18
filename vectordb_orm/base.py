@@ -20,6 +20,14 @@ class MilvusBase(metaclass=MilvusBaseMeta):
     _type_configuration: dict[str, BaseField]
 
     def __init__(self, *values: Any, **data: Any) -> None:
+        """
+        Initialize a new data object using keyword arguments. This class is both used for creating new objects
+        and for querying existing objects. The keyword arguments are used to specify the attributes of the object
+        to be created.
+
+        :param data: Keyword arguments with attribute names as keys.
+        :raises ValueError: If positional arguments are provided or an unexpected keyword argument is encountered.
+        """
         if values:
             raise ValueError("Use keyword arguments to initialize a Milvus object.")
 
@@ -63,6 +71,16 @@ class MilvusBase(metaclass=MilvusBaseMeta):
 
     @classmethod
     def _create_collection(cls, milvus_client: Milvus):
+        """
+        Create a Milvus collection using the given Milvus client.
+
+        This function is called internally during the creation of a MilvusBase instance. It translates the typehinted
+        attributes of the class into a Milvus collection schema.
+
+        :param milvus_client: An instance of the Milvus client.
+        :returns: The created Milvus collection.
+        :raises ValueError: If the class does not have a primary key defined.
+        """
         cls._assert_has_primary()
 
         fields: list[FieldSchema] = []
@@ -93,6 +111,17 @@ class MilvusBase(metaclass=MilvusBaseMeta):
 
     @classmethod
     def _field_schema_from_typehint(cls, name: str, type_hint: Any, field_customization: BaseField | None = None):
+        """
+        Create a FieldSchema based on the provided type hint and field customization.
+
+        This function is called internally during the creation of a MilvusBase instance.
+
+        :param name: The name of the field.
+        :param type_hint: The type hint for the field.
+        :param field_customization: An optional customization object for the field.
+        :returns: A FieldSchema instance.
+        :raises ValueError: If an unsupported type hint is provided or the type hint configuration is incorrect.
+        """
         if issubclass(type_hint, np.ndarray):
             if not isinstance(field_customization, EmbeddingField):
                 raise ValueError("Embedding typehints should be configured with vectordb.EmbeddingField")
@@ -114,12 +143,24 @@ class MilvusBase(metaclass=MilvusBaseMeta):
             raise ValueError(f"{cls.__name__}: Typehint {name}:{type_hint} is not supported")
 
     def insert(self, milvus_client: Milvus) -> int:
+        """
+        Insert the current MilvusBase object into the database using the provided Milvus client.
+
+        :param milvus_client: An instance of the Milvus client.
+        :returns: The primary key of the inserted object.
+        """
         entities = self._dict_representation()
         mutation_result = milvus_client.insert(collection_name=self.collection_name(), entities=entities)
         self.id = mutation_result.primary_keys[0]
         return self.id
 
     def delete(self, milvus_client: Milvus) -> None:
+        """
+        Delete the current MilvusBase object from the database using the provided Milvus client.
+
+        :param milvus_client: An instance of the Milvus client.
+        :raises ValueError: If the object has not been inserted into the database before deletion.
+        """
         if not self.id:
             raise ValueError("Cannot delete object that hasn't been inserted into the database")
 
@@ -131,6 +172,13 @@ class MilvusBase(metaclass=MilvusBaseMeta):
         self.id = None
 
     def _dict_representation(self):
+        """
+        Convert the MilvusBase object to a dictionary representation for storage.
+
+        This function is called internally during the insertion of a MilvusBase object.
+
+        :returns: A list of dictionaries containing the name, type, and values of the attributes.
+        """
         type_converters = {
             np.ndarray: DataType.FLOAT_VECTOR,
             str: DataType.VARCHAR,
@@ -151,6 +199,13 @@ class MilvusBase(metaclass=MilvusBaseMeta):
 
     @classmethod
     def from_dict(cls, data: dict):
+        """
+        Create a MilvusBase object from a dictionary.
+
+        :param data: A dictionary containing the attribute names and values.
+        :returns: A MilvusBase object.
+        :raises ValueError: If an unexpected attribute name is encountered in the dictionary.
+        """
         obj = cls()
         allowed_keys = list(cls.__annotations__.keys())
         for attribute_name, value in data.items():
