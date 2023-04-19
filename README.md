@@ -36,6 +36,28 @@ class MyObject(MilvusBase):
     embedding: np.ndarray = EmbeddingField(dim=128, index=IVF_FLAT(cluster_units=128))
 ```
 
+## Embedding Types
+
+We currently support two different types of embeddings: floating point and binary. We distinguish these based on the type signatures of the embedding array.
+
+For binary:
+
+```python
+embedding: np.ndarray[np.bool_] = EmbeddingField(
+    dim=128,
+    index=FLAT()
+)
+```
+
+For floating point:
+
+```python
+embedding: np.ndarray = EmbeddingField(
+    dim=128,
+    index=BIN_FLAT()
+)
+```
+
 ## Querying Syntax
 
 ```python

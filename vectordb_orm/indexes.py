@@ -268,7 +268,7 @@ class BIN_IVF_FLAT(IndexBase):
         return {"nlist": self.nlist}
 
     def get_inference_parameters(self):
-        return {"nprobe": self.nprobe}
+        return {"nprobe": self.nprobe, "metric_type": self.metric_type.name}
 
 
 FLOATING_INDEXES : set[IndexBase] = {FLAT, IVF_FLAT, IVF_SQ8, IVF_PQ, HNSW}
