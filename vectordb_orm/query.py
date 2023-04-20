@@ -3,7 +3,7 @@ from pymilvus.client.abstract import ChunkedQueryResult
 from vectordb_orm.attributes import AttributeCompare
 from vectordb_orm.results import QueryResult
 from vectordb_orm.fields import EmbeddingField
-from vectordb_orm.base import MilvusBase
+from vectordb_orm.base import MilvusBase, type_to_value
 from typing import Any
 
 # https://milvus.io/docs/search.md
@@ -66,27 +66,38 @@ class MilvusQueryBuilder:
         return self
 
     def all(self):
+        # Global configuration
         filters = " and ".join(self._filters) if self._filters else None
-        query_records = [self._similarity_value] if self._similarity_value is not None else None
-        embedding_field_name = self._similarity_attribute.attr if self._similarity_attribute else None
         output_fields = self._get_output_fields()
-
         offset = self._offset if self._offset is not None else 0
         # Sum of limit and offset should be less than MAX_MILVUS_INT
         limit = self._limit if self._limit is not None else (MAX_MILVUS_INT - offset)
 
-        params = {"nprobe": 16}
+        optional_args = dict()
+        if self.cls.consistency_type() is not None:
+            optional_args["consistency_level"] = self.cls.consistency_type().value
 
-        if query_records:
+        if self._similarity_attribute is not None:
+            embedding_field_name = self._similarity_attribute.attr
+            embedding_configuration : EmbeddingField = self.cls._type_configuration.get(self._similarity_attribute.attr)
+
+            # Go through the same type conversion as the embedding field during insert time
+            _, similarity_value = type_to_value(
+                self.cls.__annotations__[embedding_field_name],
+                self._similarity_value,
+            )
+            query_records = [similarity_value]
+
             search_result = self.milvus_client.search(
                 data=query_records,
                 anns_field=embedding_field_name,
-                param=params,
+                param=embedding_configuration.index.get_inference_parameters(),
                 limit=limit,
                 offset=offset,
                 collection_name=self.cls.collection_name(),
                 expression=filters,
                 output_fields=output_fields,
+                **optional_args,
             )
         else:
             search_result = self.milvus_client.query(
@@ -95,6 +106,7 @@ class MilvusQueryBuilder:
                 limit=limit,
                 output_fields=output_fields,
                 collection_name=self.cls.collection_name(),
+                **optional_args,
             )
         return self._result_to_objects(search_result)
 
@@ -130,8 +142,6 @@ class MilvusQueryBuilder:
                         key: result.entity.get(key)
                         for key in result.entity.fields
                     }
-                    print(entity)
-                    print(dir(result.entity))
                     obj = self.cls.from_dict(entity)
                     query_results.append(QueryResult(obj, score=result.score, distance=result.distance))
         else:

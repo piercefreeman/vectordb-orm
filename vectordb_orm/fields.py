@@ -1,6 +1,6 @@
 from abc import ABC
-from vectordb_orm.indexes import IndexBase
-from vectordb_orm.similarity import SimilarityMetric
+from vectordb_orm.indexes import IndexBase, FLOATING_INDEXES, BINARY_INDEXES
+from vectordb_orm.similarity import FloatSimilarityMetric, BinarySimilarityMetric
 from typing import Any
 
 class BaseField(ABC):
@@ -28,14 +28,13 @@ class EmbeddingField(BaseField):
         self,
         dim: int,
         index: IndexBase,
-        metric_type: SimilarityMetric = SimilarityMetric.L2,
         default: Any = None,
     ):
         super().__init__(default=default)
 
         self.dim = dim
         self.index = index
-        self.metric_type = metric_type
+
 
 class VarCharField(BaseField):
     def __init__(self, max_length: int, default: Any = None):

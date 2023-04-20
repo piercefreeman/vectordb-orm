@@ -1,8 +1,9 @@
 import pytest
 from pymilvus import Milvus, connections
 from vectordb_orm import MilvusSession
-from vectordb_orm.tests.models import MyObject
+from vectordb_orm.tests.models import MyObject, BinaryEmbeddingObject
 import numpy as np
+from time import sleep
 
 def test_query(collection, milvus_client: Milvus, session: MilvusSession):
     """
@@ -31,6 +32,29 @@ def test_query(collection, milvus_client: Milvus, session: MilvusSession):
     assert len(results) == 1
     assert results[0].result.id == obj3.id
 
+# @pierce 04-21- 2023: Currently flaky
+# https://github.com/piercefreeman/vectordb-orm/pull/5
+@pytest.mark.xfail(strict=False)
+def test_binary_collection_query(binary_collection, milvus_client: Milvus, session: MilvusSession):
+    # Create some MyObject instances
+    obj1 = BinaryEmbeddingObject(embedding=np.array([True] * 128))
+    obj2 = BinaryEmbeddingObject(embedding=np.array([False] * 128))
+
+    # Insert the objects into Milvus
+    obj1.insert(milvus_client)
+    obj2.insert(milvus_client)
+
+    binary_collection.flush()
+    binary_collection.load()  
+
+    # Test our ability to recall 1:1 the input content
+    results = session.query(BinaryEmbeddingObject).order_by_similarity(BinaryEmbeddingObject.embedding, np.array([True]*128)).limit(2).all()
+    assert len(results) == 2
+    assert results[0].result.id == obj1.id
+
+    results = session.query(BinaryEmbeddingObject).order_by_similarity(BinaryEmbeddingObject.embedding, np.array([False]*128)).limit(2).all()
+    assert len(results) == 2
+    assert results[0].result.id == obj2.id
 
 def test_query_default_ignores_embeddings(collection, milvus_client: Milvus, session: MilvusSession):
     """

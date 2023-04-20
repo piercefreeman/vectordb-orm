@@ -25,7 +25,6 @@ docker-compose up -d
 
 ```python
 from vectordb_orm import MilvusBase, EmbeddingField, VarCharField, PrimaryKeyField
-from pymilvus import Milvus
 from vectordb_orm.indexes import IVF_FLAT
 import numpy as np
 
@@ -35,6 +34,28 @@ class MyObject(MilvusBase):
     id: int = PrimaryKeyField()
     text: str = VarCharField(max_length=128)
     embedding: np.ndarray = EmbeddingField(dim=128, index=IVF_FLAT(cluster_units=128))
+```
+
+## Embedding Types
+
+We currently support two different types of embeddings: floating point and binary. We distinguish these based on the type signatures of the embedding array.
+
+For binary:
+
+```python
+embedding: np.ndarray[np.bool_] = EmbeddingField(
+    dim=128,
+    index=FLAT()
+)
+```
+
+For floating point:
+
+```python
+embedding: np.ndarray = EmbeddingField(
+    dim=128,
+    index=BIN_FLAT()
+)
 ```
 
 ## Querying Syntax
