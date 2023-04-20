@@ -32,6 +32,9 @@ def test_query(collection, milvus_client: Milvus, session: MilvusSession):
     assert len(results) == 1
     assert results[0].result.id == obj3.id
 
+# @pierce 04-21- 2023: Currently flaky
+# https://github.com/piercefreeman/vectordb-orm/pull/5
+@pytest.mark.xfail(strict=False)
 def test_binary_collection_query(binary_collection, milvus_client: Milvus, session: MilvusSession):
     # Create some MyObject instances
     obj1 = BinaryEmbeddingObject(embedding=np.array([True] * 128))

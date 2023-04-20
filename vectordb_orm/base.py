@@ -283,7 +283,8 @@ def type_to_value(type_hint, value: Any | None = None):
         if vector_type == DataType.BINARY_VECTOR:
             if value is not None:
                 packed_uint8_array = np.packbits(value)
-                value = packed_uint8_array.tobytes()
+                #value = packed_uint8_array.tobytes()
+                value = bytes(packed_uint8_array.tolist())
             return vector_type, value
         else:
             if value is not None:
