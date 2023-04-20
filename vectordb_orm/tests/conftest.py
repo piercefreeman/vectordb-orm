@@ -1,37 +1,23 @@
 import pytest
 from pymilvus import Milvus, connections
-from vectordb_orm import MilvusSession
+from vectordb_orm import VectorSession, MilvusBackend
 from vectordb_orm.tests.models import MyObject, BinaryEmbeddingObject
 from time import sleep
 
-@pytest.fixture()
-def milvus_client():
-    return Milvus()
 
 @pytest.fixture()
-def session(milvus_client):
-    session = MilvusSession(milvus_client)
+def session():
+    session = VectorSession(MilvusBackend(Milvus()))
     connections.connect("default", host="localhost", port="19530")
+
+    # Wipe the previous collections
+    session.delete_collection(MyObject)
+    session.delete_collection(BinaryEmbeddingObject)
+
+    # Flush
+    sleep(1)
+
+    session.create_collection(MyObject)
+    session.create_collection(BinaryEmbeddingObject)
+
     return session
-
-@pytest.fixture()
-def collection(session: MilvusSession, milvus_client: Milvus):
-    # Wipe the collection
-    milvus_client.drop_collection(MyObject.collection_name())
-
-    # Flush
-    sleep(1)
-
-    # Create a new default one
-    return MyObject._create_collection(milvus_client)
-
-@pytest.fixture()
-def binary_collection(session: MilvusSession, milvus_client: Milvus):
-    # Wipe the collection
-    milvus_client.drop_collection(BinaryEmbeddingObject.collection_name())
-
-    # Flush
-    sleep(1)
-
-    # Create a new default one
-    return BinaryEmbeddingObject._create_collection(milvus_client)

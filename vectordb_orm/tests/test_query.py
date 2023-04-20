@@ -1,11 +1,11 @@
 import pytest
 from pymilvus import Milvus, connections
-from vectordb_orm import MilvusSession
+from vectordb_orm import VectorSession
 from vectordb_orm.tests.models import MyObject, BinaryEmbeddingObject
 import numpy as np
 from time import sleep
 
-def test_query(collection, milvus_client: Milvus, session: MilvusSession):
+def test_query(session: VectorSession):
     """
     General test of querying and query chaining
     """
@@ -15,12 +15,12 @@ def test_query(collection, milvus_client: Milvus, session: MilvusSession):
     obj3 = MyObject(text="baz", embedding=np.array([7.0] * 128))
 
     # Insert the objects into Milvus
-    obj1.insert(milvus_client)
-    obj2.insert(milvus_client)
-    obj3.insert(milvus_client)
+    session.insert(obj1)
+    session.insert(obj2)
+    session.insert(obj3)
 
-    collection.flush()
-    collection.load()  
+    session.flush(MyObject)
+    session.load(MyObject)
 
     # Test a simple filter and similarity ranking
     results = session.query(MyObject).filter(MyObject.text == 'bar').order_by_similarity(MyObject.embedding, np.array([1.0]*128)).limit(2).all()
@@ -35,17 +35,17 @@ def test_query(collection, milvus_client: Milvus, session: MilvusSession):
 # @pierce 04-21- 2023: Currently flaky
 # https://github.com/piercefreeman/vectordb-orm/pull/5
 @pytest.mark.xfail(strict=False)
-def test_binary_collection_query(binary_collection, milvus_client: Milvus, session: MilvusSession):
+def test_binary_collection_query(session: VectorSession):
     # Create some MyObject instances
     obj1 = BinaryEmbeddingObject(embedding=np.array([True] * 128))
     obj2 = BinaryEmbeddingObject(embedding=np.array([False] * 128))
 
     # Insert the objects into Milvus
-    obj1.insert(milvus_client)
-    obj2.insert(milvus_client)
+    session.insert(obj1)
+    session.insert(obj2)
 
-    binary_collection.flush()
-    binary_collection.load()  
+    session.flush(BinaryEmbeddingObject)
+    session.load(BinaryEmbeddingObject)  
 
     # Test our ability to recall 1:1 the input content
     results = session.query(BinaryEmbeddingObject).order_by_similarity(BinaryEmbeddingObject.embedding, np.array([True]*128)).limit(2).all()
@@ -56,16 +56,16 @@ def test_binary_collection_query(binary_collection, milvus_client: Milvus, sessi
     assert len(results) == 2
     assert results[0].result.id == obj2.id
 
-def test_query_default_ignores_embeddings(collection, milvus_client: Milvus, session: MilvusSession):
+def test_query_default_ignores_embeddings(session: VectorSession):
     """
     Ensure that querying on the class by default ignores embeddings that are included
     within the type definition.
     """
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
-    obj1.insert(milvus_client)
+    session.insert(obj1)
 
-    collection.flush()
-    collection.load()  
+    session.flush(MyObject)
+    session.load(MyObject)
 
     # Test a simple filter and similarity ranking
     results = session.query(MyObject).filter(MyObject.text == 'foo').limit(2).all()
@@ -75,15 +75,15 @@ def test_query_default_ignores_embeddings(collection, milvus_client: Milvus, ses
     assert result.embedding is None
 
 
-def test_query_with_fields(collection, milvus_client: Milvus, session: MilvusSession):
+def test_query_with_fields(session: VectorSession):
     """
     Test querying with specific fields
     """
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
-    obj1.insert(milvus_client)
+    session.insert(obj1)
 
-    collection.flush()
-    collection.load()  
+    session.flush(MyObject)
+    session.load(MyObject)
 
     # We can query for regular attributes
     results = session.query(MyObject.text).filter(MyObject.text == 'foo').all()

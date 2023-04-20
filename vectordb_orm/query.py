@@ -1,15 +1,13 @@
-from pymilvus import Milvus
-from pymilvus.client.abstract import ChunkedQueryResult
+from vectordb_orm.backends.base import BackendBase
 from vectordb_orm.attributes import AttributeCompare
-from vectordb_orm.results import QueryResult
 from vectordb_orm.fields import EmbeddingField
-from vectordb_orm.base import MilvusBase, type_to_value
+from vectordb_orm.base import VectorSchemaBase
 from typing import Any
 
 # https://milvus.io/docs/search.md
 MAX_MILVUS_INT = 16384
 
-class MilvusQueryBuilder:
+class VectorQueryBuilder:
     """
     Recursive query builder to allow for chaining of queries.
 
@@ -21,19 +19,19 @@ class MilvusQueryBuilder:
     """
     def __init__(
         self,
-        milvus_client: Milvus,
-        *query_objects: MilvusBase | AttributeCompare
+        backend: BackendBase,
+        *query_objects: VectorSchemaBase | AttributeCompare
     ):
         if len(query_objects) == 0:
             raise ValueError("Must specify at least one query object.")
 
-        self.milvus_client = milvus_client
+        self.backend = backend
         if isinstance(query_objects[0], AttributeCompare):
             self.cls = query_objects[0].base_cls
-        elif issubclass(query_objects[0], MilvusBase):
+        elif issubclass(query_objects[0], VectorSchemaBase):
             self.cls = query_objects[0]
         else:
-            raise ValueError(f"Query object must be of type `MilvusBase` or `AttributeCompare`, got {type(query_objects[0])}")
+            raise ValueError(f"Query object must be of type `VectorSchemaBase` or `AttributeCompare`, got {type(query_objects[0])}")
 
         # Queries created over time
         self._query_objects = list(query_objects)
@@ -47,7 +45,7 @@ class MilvusQueryBuilder:
 
     def filter(self, *filters: AttributeCompare):
         for f in filters:
-            self._filters.append(f.to_expression())
+            self._filters.append(f)
         return self
 
     def offset(self, offset: int):
@@ -67,48 +65,20 @@ class MilvusQueryBuilder:
 
     def all(self):
         # Global configuration
-        filters = " and ".join(self._filters) if self._filters else None
         output_fields = self._get_output_fields()
         offset = self._offset if self._offset is not None else 0
         # Sum of limit and offset should be less than MAX_MILVUS_INT
         limit = self._limit if self._limit is not None else (MAX_MILVUS_INT - offset)
 
-        optional_args = dict()
-        if self.cls.consistency_type() is not None:
-            optional_args["consistency_level"] = self.cls.consistency_type().value
-
-        if self._similarity_attribute is not None:
-            embedding_field_name = self._similarity_attribute.attr
-            embedding_configuration : EmbeddingField = self.cls._type_configuration.get(self._similarity_attribute.attr)
-
-            # Go through the same type conversion as the embedding field during insert time
-            _, similarity_value = type_to_value(
-                self.cls.__annotations__[embedding_field_name],
-                self._similarity_value,
-            )
-            query_records = [similarity_value]
-
-            search_result = self.milvus_client.search(
-                data=query_records,
-                anns_field=embedding_field_name,
-                param=embedding_configuration.index.get_inference_parameters(),
-                limit=limit,
-                offset=offset,
-                collection_name=self.cls.collection_name(),
-                expression=filters,
-                output_fields=output_fields,
-                **optional_args,
-            )
-        else:
-            search_result = self.milvus_client.query(
-                expr=filters,
-                offset=offset,
-                limit=limit,
-                output_fields=output_fields,
-                collection_name=self.cls.collection_name(),
-                **optional_args,
-            )
-        return self._result_to_objects(search_result)
+        return self.backend.search(
+            schema=self.cls,
+            output_fields=output_fields,
+            filters=self._filters,
+            search_embedding=self._similarity_value,
+            search_embedding_key=self._similarity_attribute.attr if self._similarity_attribute is not None else None,
+            limit=limit,
+            offset=offset,
+        )
 
     def _get_output_fields(self) -> list[str]:
         """
@@ -124,29 +94,10 @@ class MilvusQueryBuilder:
                 if field_configuration and isinstance(field_configuration, EmbeddingField):
                     raise ValueError("Cannot query for embedding field. Use `order_by_similarity` instead.")
                 fields.add(query_object.attr)
-            elif issubclass(query_object, MilvusBase):
+            elif issubclass(query_object, VectorSchemaBase):
                 for attribute_name in self.cls.__annotations__.keys():
                     field_configuration = self.cls._type_configuration.get(attribute_name)
                     if field_configuration and isinstance(field_configuration, EmbeddingField):
                         continue
                     fields.add(attribute_name)
         return list(fields)
-
-    def _result_to_objects(self, search_result: ChunkedQueryResult | list[dict[str, Any]]):
-        query_results : list[QueryResult] = []
-
-        if isinstance(search_result, ChunkedQueryResult):
-            for hit in search_result:
-                for result in hit:
-                    entity = {
-                        key: result.entity.get(key)
-                        for key in result.entity.fields
-                    }
-                    obj = self.cls.from_dict(entity)
-                    query_results.append(QueryResult(obj, score=result.score, distance=result.distance))
-        else:
-            for result in search_result:
-                obj = self.cls.from_dict(result)
-                query_results.append(QueryResult(obj))
-
-        return query_results

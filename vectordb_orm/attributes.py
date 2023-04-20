@@ -45,10 +45,3 @@ class AttributeCompare:
 
     def __ge__(self, other):
         return AttributeCompare(self.base_cls, self.attr, other, OperationType.GREATER_THAN_EQUAL)
-
-    def to_expression(self):
-        value = self.value
-        if isinstance(value, str):
-            value = f"\"{self.value}\""
-
-        return f"{self.attr} {self.op.value} {value}"
