@@ -1,5 +1,6 @@
 from enum import Enum
 from pymilvus.client.types import MetricType
+from pymilvus.orm.types import CONSISTENCY_STRONG, CONSISTENCY_BOUNDED, CONSISTENCY_EVENTUALLY, CONSISTENCY_SESSION
 
 class FloatSimilarityMetric(Enum):
     """
@@ -20,3 +21,14 @@ class BinarySimilarityMetric(Enum):
     JACCARD = MetricType.JACCARD.name
     TANIMOTO = MetricType.TANIMOTO.name
     HAMMING = MetricType.HAMMING.name
+
+class ConsistencyType(Enum):
+    """
+    Define the strength of the consistency within the distributed DB:
+    https://milvus.io/docs/consistency.md
+
+    """
+    STRONG = CONSISTENCY_STRONG
+    BOUNDED = CONSISTENCY_BOUNDED
+    SESSION = CONSISTENCY_SESSION
+    EVENTUALLY = CONSISTENCY_EVENTUALLY

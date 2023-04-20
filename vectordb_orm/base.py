@@ -4,6 +4,7 @@ from pymilvus.orm.schema import CollectionSchema, FieldSchema
 from vectordb_orm.attributes import AttributeCompare
 from vectordb_orm.fields import EmbeddingField, VarCharField, BaseField, PrimaryKeyField
 from vectordb_orm.indexes import FLOATING_INDEXES, BINARY_INDEXES
+from vectordb_orm.similarity import ConsistencyType
 from typing import Any
 import numpy as np
 from typing import get_args, get_origin
@@ -65,6 +66,12 @@ class MilvusBase(metaclass=MilvusBaseMeta):
         if not hasattr(self, '__collection_name__'):
             raise ValueError(f"Class {self.__name__} does not have a collection name, specify `__collection_name__` on the class definition.")
         return self.__collection_name__
+
+    @classmethod
+    def consistency_type(self) -> ConsistencyType | None:
+        if not hasattr(self, '__consistency_type__'):
+            return None
+        return self.__consistency_type__
 
     @classmethod
     def _create_collection(cls, milvus_client: Milvus):

@@ -73,6 +73,10 @@ class MilvusQueryBuilder:
         # Sum of limit and offset should be less than MAX_MILVUS_INT
         limit = self._limit if self._limit is not None else (MAX_MILVUS_INT - offset)
 
+        optional_args = dict()
+        if self.cls.consistency_type() is not None:
+            optional_args["consistency_level"] = self.cls.consistency_type().value
+
         if self._similarity_attribute is not None:
             embedding_field_name = self._similarity_attribute.attr
             embedding_configuration : EmbeddingField = self.cls._type_configuration.get(self._similarity_attribute.attr)
@@ -93,6 +97,7 @@ class MilvusQueryBuilder:
                 collection_name=self.cls.collection_name(),
                 expression=filters,
                 output_fields=output_fields,
+                **optional_args,
             )
         else:
             search_result = self.milvus_client.query(
@@ -101,6 +106,7 @@ class MilvusQueryBuilder:
                 limit=limit,
                 output_fields=output_fields,
                 collection_name=self.cls.collection_name(),
+                **optional_args,
             )
         return self._result_to_objects(search_result)
 
@@ -136,8 +142,6 @@ class MilvusQueryBuilder:
                         key: result.entity.get(key)
                         for key in result.entity.fields
                     }
-                    print(entity)
-                    print(dir(result.entity))
                     obj = self.cls.from_dict(entity)
                     query_results.append(QueryResult(obj, score=result.score, distance=result.distance))
         else:
