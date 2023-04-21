@@ -12,6 +12,7 @@ from vectordb_orm.backends.pinecone.indexes import PineconeIndex
 from vectordb_orm.base import VectorSchemaBase
 from vectordb_orm.fields import EmbeddingField
 from vectordb_orm.results import QueryResult
+from vectordb_orm.attributes import OperationType
 
 
 class PineconeBackend(BackendBase):
@@ -53,11 +54,12 @@ class PineconeBackend(BackendBase):
         }
 
         _, embedding_field = self._get_embedding_field(schema)
+        index : PineconeIndex = embedding_field.index
 
         pinecone.create_index(
             name=collection_name,
             dimension=embedding_field.dim,
-            metric="euclidean",
+            metric=index.metric_type.value,
             metadata_config=metadata_config
         )
         return pinecone.Index(index_name=collection_name)
@@ -109,7 +111,7 @@ class PineconeBackend(BackendBase):
                 embedding_value.tolist(),
                 {
                     **metadata_fields,
-                    primary_key: id
+                    primary_key: id,
                 }
             ),
         ])
@@ -156,12 +158,10 @@ class PineconeBackend(BackendBase):
             search_embedding_key, embedding_configuration = self._get_embedding_field(schema)
             search_embedding = np.zeros((embedding_configuration.dim,))
 
-        print("raw", filters)
         filters =  {
-            attribute.attr: {"$eq": attribute.value}
+            attribute.attr: self._attribute_to_value_payload(schema, attribute)
             for attribute in filters
         }
-        print(filters)
         query_response = index.query(
             filter=filters,
             top_k=limit,
@@ -176,8 +176,8 @@ class PineconeBackend(BackendBase):
                 QueryResult(
                     result=schema.from_dict(
                         {
-                            primary_key: int(item["id"]),
                             **item["metadata"],
+                            primary_key: int(item["id"]),
                         }
                     ),
                     score=item["score"] if not missing_vector else None,
@@ -227,3 +227,22 @@ class PineconeBackend(BackendBase):
         # Ensure that we are using a supported index
         if not isinstance(embedding_field.index, PineconeIndex):
             raise ValueError("Pinecone only supports a basic `PineconeIndex`.")
+
+    def _attribute_to_value_payload(self, schema: Type[VectorSchemaBase], attribute: AttributeCompare):
+        """
+        Converts an attribute to a filter value payload for Pinecone, using Mongo's filtering syntax
+
+        """
+        operation_type_maps = {
+            OperationType.EQUALS: "$eq",
+            OperationType.GREATER_THAN: "$gt",
+            OperationType.GREATER_THAN_EQUAL: "$gte",
+            OperationType.LESS_THAN: "$lt",
+            OperationType.LESS_THAN_EQUAL: "$lte",
+            OperationType.NOT_EQUAL: "$ne",
+            # TODO: Support $in and $nin
+        }
+
+        return {
+            operation_type_maps[attribute.op]: attribute.value
+        }

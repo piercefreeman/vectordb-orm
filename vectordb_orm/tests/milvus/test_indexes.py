@@ -7,9 +7,9 @@ from pymilvus import Milvus
 from vectordb_orm import (EmbeddingField, PrimaryKeyField, VectorSchemaBase,
                           VectorSession)
 from vectordb_orm.backends.milvus.indexes import (BINARY_INDEXES,
-                                                  FLOATING_INDEXES, IndexBase)
+                                                  FLOATING_INDEXES, MilvusIndexBase)
 from vectordb_orm.backends.milvus.similarity import (
-    BinarySimilarityMetric, MilvusFloatSimilarityMetric)
+    MilvusBinarySimilarityMetric, MilvusFloatSimilarityMetric)
 
 # Different index definitions require different kwarg arguments; we centralize
 # them here for ease of accessing them during different test runs
@@ -43,8 +43,8 @@ INDEX_DEFAULTS = {
     )
 )
 def test_floating_index(
-    session: VectorSession,
-    index_cls: IndexBase,
+    milvus_session: VectorSession,
+    index_cls: MilvusIndexBase,
     metric_type: MilvusFloatSimilarityMetric,
 ):
     class IndexSubclassObject(VectorSchemaBase):
@@ -59,19 +59,19 @@ def test_floating_index(
             )
         )
 
-    session.delete_collection(IndexSubclassObject)
-    session.create_collection(IndexSubclassObject)
+    milvus_session.delete_collection(IndexSubclassObject)
+    milvus_session.create_collection(IndexSubclassObject)
 
     # Insert an object
     my_object = IndexSubclassObject(embedding=np.array([1.0] * 128))
-    session.insert(my_object)
+    milvus_session.insert(my_object)
 
     # Flush and load the collection
-    session.flush(IndexSubclassObject)
-    session.load(IndexSubclassObject)
+    milvus_session.flush(IndexSubclassObject)
+    milvus_session.load(IndexSubclassObject)
 
     # Perform a query
-    results = session.query(IndexSubclassObject).order_by_similarity(IndexSubclassObject.embedding, np.array([1.0] * 128)).all()
+    results = milvus_session.query(IndexSubclassObject).order_by_similarity(IndexSubclassObject.embedding, np.array([1.0] * 128)).all()
     assert len(results) == 1
     assert results[0].result.id == my_object.id
 
@@ -80,13 +80,13 @@ def test_floating_index(
     "index_cls,metric_type",
     product(
         BINARY_INDEXES,
-        [item for item in BinarySimilarityMetric],
+        [item for item in MilvusBinarySimilarityMetric],
     )
 )
 def test_binary_index(
-    session: VectorSession,
-    index_cls: IndexBase,
-    metric_type: BinarySimilarityMetric,
+    milvus_session: VectorSession,
+    index_cls: MilvusIndexBase,
+    metric_type: MilvusBinarySimilarityMetric,
 ):
     class IndexSubclassObject(VectorSchemaBase):
         __collection_name__ = 'index_collection'
@@ -100,18 +100,18 @@ def test_binary_index(
             )
         )
 
-    session.delete_collection(IndexSubclassObject)
-    session.create_collection(IndexSubclassObject)
+    milvus_session.delete_collection(IndexSubclassObject)
+    milvus_session.create_collection(IndexSubclassObject)
 
     # Insert an object
     my_object = IndexSubclassObject(embedding=np.array([True] * 128))
-    session.insert(my_object)
+    milvus_session.insert(my_object)
 
     # Flush and load the collection
-    session.flush(IndexSubclassObject)
-    session.load(IndexSubclassObject)
+    milvus_session.flush(IndexSubclassObject)
+    milvus_session.load(IndexSubclassObject)
 
     # Perform a query
-    results = session.query(IndexSubclassObject).order_by_similarity(IndexSubclassObject.embedding, np.array([True] * 128)).all()
+    results = milvus_session.query(IndexSubclassObject).order_by_similarity(IndexSubclassObject.embedding, np.array([True] * 128)).all()
     assert len(results) == 1
     assert results[0].result.id == my_object.id

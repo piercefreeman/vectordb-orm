@@ -7,15 +7,15 @@ if TYPE_CHECKING:
 
 class OperationType(Enum):
     """
-    Values of the operation type should correspond to the operators used in the Milvus query language
+    Types fo comparison supported by our querying language
 
     """
-    EQUALS = '=='
-    GREATER_THAN = '>'
-    LESS_THAN = '<'
-    LESS_THAN_EQUAL = '<='
-    GREATER_THAN_EQUAL = '>='
-    NOT_EQUAL = '!='
+    EQUALS = 'EQUALS'
+    GREATER_THAN = 'GREATER_THAN'
+    LESS_THAN = 'LESS_THAN'
+    LESS_THAN_EQUAL = 'LESS_THAN_EQUAL'
+    GREATER_THAN_EQUAL = 'GREATER_THAN_EQUAL'
+    NOT_EQUAL = 'NOT_EQUAL'
 
 
 class AttributeCompare:

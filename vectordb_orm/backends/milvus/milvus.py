@@ -7,7 +7,7 @@ from pymilvus.client.abstract import ChunkedQueryResult
 from pymilvus.client.types import DataType
 from pymilvus.orm.schema import CollectionSchema, FieldSchema
 
-from vectordb_orm.attributes import AttributeCompare
+from vectordb_orm.attributes import AttributeCompare, OperationType
 from vectordb_orm.backends.base import BackendBase
 from vectordb_orm.backends.milvus.indexes import (BINARY_INDEXES,
                                                   FLOATING_INDEXES)
@@ -281,7 +281,16 @@ class MilvusBackend(BackendBase):
         if isinstance(value, str):
             value = f"\"{attribute.value}\""
 
-        return f"{attribute.attr} {attribute.op.value} {value}"
+        operation_type_maps = {
+            OperationType.EQUALS: '==',
+            OperationType.GREATER_THAN: '>',
+            OperationType.LESS_THAN: '<',
+            OperationType.LESS_THAN_EQUAL: '<=',
+            OperationType.GREATER_THAN_EQUAL: '>=',
+            OperationType.NOT_EQUAL: '!='
+        }
+
+        return f"{attribute.attr} {operation_type_maps[attribute.op]} {value}"
 
 def extract_base_type(type):
     """

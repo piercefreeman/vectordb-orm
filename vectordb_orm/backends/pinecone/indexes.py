@@ -25,5 +25,5 @@ class PineconeIndex(IndexBase):
 
     def _assert_metric_type(self, metric_type: PineconeSimilarityMetric):
         # Only support valid combinations of metric type and index
-        if isinstance(metric_type, PineconeSimilarityMetric):
+        if not isinstance(metric_type, PineconeSimilarityMetric):
             raise ValueError(f"Index type {self} is not supported for metric type {metric_type}")
