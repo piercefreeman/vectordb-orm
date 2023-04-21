@@ -1,10 +1,15 @@
+from itertools import product
+
+import numpy as np
 import pytest
 from pymilvus import Milvus
-from vectordb_orm import VectorSession, EmbeddingField, PrimaryKeyField, VectorSchemaBase
-import numpy as np
-from vectordb_orm.indexes import IndexBase, FLOATING_INDEXES, BINARY_INDEXES
-from vectordb_orm.similarity import FloatSimilarityMetric, BinarySimilarityMetric
-from itertools import product
+
+from vectordb_orm import (EmbeddingField, PrimaryKeyField, VectorSchemaBase,
+                          VectorSession)
+from vectordb_orm.backends.milvus.indexes import (BINARY_INDEXES,
+                                                  FLOATING_INDEXES, IndexBase)
+from vectordb_orm.backends.milvus.similarity import (
+    BinarySimilarityMetric, MilvusFloatSimilarityMetric)
 
 # Different index definitions require different kwarg arguments; we centralize
 # them here for ease of accessing them during different test runs
@@ -34,13 +39,13 @@ INDEX_DEFAULTS = {
     "index_cls,metric_type",
     product(
         FLOATING_INDEXES,
-        [item for item in FloatSimilarityMetric],
+        [item for item in MilvusFloatSimilarityMetric],
     )
 )
 def test_floating_index(
     session: VectorSession,
     index_cls: IndexBase,
-    metric_type: FloatSimilarityMetric,
+    metric_type: MilvusFloatSimilarityMetric,
 ):
     class IndexSubclassObject(VectorSchemaBase):
         __collection_name__ = 'index_collection'

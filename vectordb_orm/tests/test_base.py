@@ -1,11 +1,12 @@
-import pytest
-from vectordb_orm import VectorSession
-from vectordb_orm.tests.models import MyObject
 import numpy as np
-from time import sleep
-from vectordb_orm import VectorSchemaBase, EmbeddingField, PrimaryKeyField
-from vectordb_orm.indexes import IVF_FLAT
+import pytest
+
+from vectordb_orm import (EmbeddingField, PrimaryKeyField, VectorSchemaBase,
+                          VectorSession)
+from vectordb_orm.backends.milvus.indexes import Milvus_IVF_FLAT
 from vectordb_orm.tests.conftest import SESSION_FIXTURE_KEYS
+from vectordb_orm.tests.models import MyObject
+
 
 def test_create_object():
     my_object = MyObject(text='example', embedding=np.array([1.0] * 128))
@@ -65,7 +66,7 @@ def test_milvus_invalid_typesignatures(milvus_session: VectorSession):
         __collection_name__ = 'invalid_collection'
 
         id: int = PrimaryKeyField()
-        embedding: np.ndarray[np.bool_] = EmbeddingField(dim=128, index=IVF_FLAT(cluster_units=128))
+        embedding: np.ndarray[np.bool_] = EmbeddingField(dim=128, index=Milvus_IVF_FLAT(cluster_units=128))
 
     with pytest.raises(ValueError, match="not compatible with binary vectors"):
         milvus_session.create_collection(TestInvalidObject)

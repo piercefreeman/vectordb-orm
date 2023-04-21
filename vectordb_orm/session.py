@@ -1,8 +1,11 @@
+from typing import Type
+
+from pymilvus import Milvus
+
+from vectordb_orm.backends.base import BackendBase
 from vectordb_orm.base import VectorSchemaBase
 from vectordb_orm.query import VectorQueryBuilder
-from vectordb_orm.backends.base import BackendBase
-from pymilvus import Milvus
-from typing import Type
+
 
 class VectorSession:
     """

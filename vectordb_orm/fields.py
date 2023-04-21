@@ -1,7 +1,8 @@
 from abc import ABC
-from vectordb_orm.indexes import IndexBase, FLOATING_INDEXES, BINARY_INDEXES
-from vectordb_orm.similarity import FloatSimilarityMetric, BinarySimilarityMetric
 from typing import Any
+
+from vectordb_orm.index import IndexBase
+
 
 class BaseField(ABC):
     """
@@ -19,8 +20,8 @@ class BaseField(ABC):
 
 
 class PrimaryKeyField(BaseField):
-    def __init__(self, default: Any = None):
-        super().__init__(default=default)
+    def __init__(self):
+        super().__init__(default=None)
 
 
 class EmbeddingField(BaseField):

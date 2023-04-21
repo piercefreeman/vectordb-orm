@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import Type
+
+import numpy as np
+
+from vectordb_orm.attributes import AttributeCompare
 from vectordb_orm.base import VectorSchemaBase
 from vectordb_orm.fields import PrimaryKeyField
-import numpy as np
-from vectordb_orm.attributes import AttributeCompare
 from vectordb_orm.results import QueryResult
+
 
 class BackendBase(ABC):
     max_fetch_size: int

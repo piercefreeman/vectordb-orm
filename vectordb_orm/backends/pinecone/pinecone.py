@@ -1,14 +1,18 @@
-import pinecone
-from vectordb_orm.backends.base import BackendBase
-from typing import Type
-from vectordb_orm.base import VectorSchemaBase
-import numpy as np
-from vectordb_orm.attributes import AttributeCompare
-from vectordb_orm.fields import EmbeddingField
-from re import match as re_match
 from logging import info
+from re import match as re_match
+from typing import Type
 from uuid import uuid4
+
+import numpy as np
+import pinecone
+
+from vectordb_orm.attributes import AttributeCompare
+from vectordb_orm.backends.base import BackendBase
+from vectordb_orm.backends.pinecone.indexes import PineconeIndex
+from vectordb_orm.base import VectorSchemaBase
+from vectordb_orm.fields import EmbeddingField
 from vectordb_orm.results import QueryResult
+
 
 class PineconeBackend(BackendBase):
     max_fetch_size = 1000
@@ -34,6 +38,7 @@ class PineconeBackend(BackendBase):
 
         self._assert_valid_collection_name(collection_name)
         self._assert_has_primary(schema)
+        self._assert_valid_embedding_field(schema)
 
         # Pinecone allows for dynamic keys on each object
         # However we need to pre-provide the keys we want to search on
@@ -215,3 +220,10 @@ class PineconeBackend(BackendBase):
             raise ValueError(f"Pinecone only supports one embedding field per collection. {schema} has {len(embedding_fields)} defined: {list(embedding_fields.keys())}.")
 
         return list(embedding_fields.items())[0]
+
+    def _assert_valid_embedding_field(self, schema: Type[VectorSchemaBase]):
+        _, embedding_field = self._get_embedding_field(schema)
+
+        # Ensure that we are using a supported index
+        if not isinstance(embedding_field.index, PineconeIndex):
+            raise ValueError("Pinecone only supports a basic `PineconeIndex`.")

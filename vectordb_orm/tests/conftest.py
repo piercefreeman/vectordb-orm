@@ -1,10 +1,12 @@
-import pytest
-from pymilvus import Milvus, connections
-from vectordb_orm import VectorSession, MilvusBackend, PineconeBackend
-from vectordb_orm.tests.models import MyObject, BinaryEmbeddingObject
-from time import sleep
 from os import getenv
+from time import sleep
+
+import pytest
 from dotenv import load_dotenv
+from pymilvus import Milvus, connections
+
+from vectordb_orm import MilvusBackend, PineconeBackend, VectorSession
+from vectordb_orm.tests.models import BinaryEmbeddingObject, MyObject
 
 
 @pytest.fixture()

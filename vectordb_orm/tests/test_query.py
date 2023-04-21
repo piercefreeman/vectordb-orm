@@ -1,14 +1,18 @@
-import pytest
-from pymilvus import Milvus, connections
-from vectordb_orm import VectorSession
-from vectordb_orm.tests.models import MyObject, BinaryEmbeddingObject
 import numpy as np
-from time import sleep
+import pytest
 
-def test_query(session: VectorSession):
+from vectordb_orm import VectorSession
+from vectordb_orm.tests.conftest import SESSION_FIXTURE_KEYS
+from vectordb_orm.tests.models import BinaryEmbeddingObject, MyObject
+
+
+@pytest.mark.parametrize("session", SESSION_FIXTURE_KEYS)
+def test_query(session: str, request):
     """
     General test of querying and query chaining
     """
+    session : VectorSession = request.getfixturevalue(session)
+
     # Create some MyObject instances
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
     obj2 = MyObject(text="bar", embedding=np.array([4.0] * 128))
@@ -56,11 +60,14 @@ def test_binary_collection_query(session: VectorSession):
     assert len(results) == 2
     assert results[0].result.id == obj2.id
 
-def test_query_default_ignores_embeddings(session: VectorSession):
+@pytest.mark.parametrize("session", SESSION_FIXTURE_KEYS)
+def test_query_default_ignores_embeddings(session: str, request):
     """
     Ensure that querying on the class by default ignores embeddings that are included
     within the type definition.
     """
+    session : VectorSession = request.getfixturevalue(session)
+
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
     session.insert(obj1)
 
@@ -74,11 +81,13 @@ def test_query_default_ignores_embeddings(session: VectorSession):
     result : MyObject = results[0].result
     assert result.embedding is None
 
-
-def test_query_with_fields(session: VectorSession):
+@pytest.mark.parametrize("session", SESSION_FIXTURE_KEYS)
+def test_query_with_fields(session: str, request):
     """
     Test querying with specific fields
     """
+    session : VectorSession = request.getfixturevalue(session)
+
     obj1 = MyObject(text="foo", embedding=np.array([1.0] * 128))
     session.insert(obj1)
 

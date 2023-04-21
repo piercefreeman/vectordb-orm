@@ -1,6 +1,7 @@
-from vectordb_orm.attributes import AttributeCompare
-from vectordb_orm.similarity import ConsistencyType
 from typing import Any
+
+from vectordb_orm.attributes import AttributeCompare
+from vectordb_orm.enums import ConsistencyType
 from vectordb_orm.fields import BaseField, PrimaryKeyField
 
 

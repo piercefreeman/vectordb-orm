@@ -1,0 +1,2 @@
+class IndexBase:
+    pass

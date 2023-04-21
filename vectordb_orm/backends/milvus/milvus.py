@@ -1,22 +1,21 @@
-from pymilvus import Milvus, Collection
-from pymilvus.client.types import DataType
-from pymilvus.orm.schema import CollectionSchema, FieldSchema
-from vectordb_orm.backends.base import BackendBase
-import numpy as np
-from typing import get_args, get_origin
 from logging import info
-from vectordb_orm.base import VectorSchemaBase
-from typing import Type
-from pymilvus import Milvus, Collection
+from typing import Any, Type, get_args, get_origin
+
+import numpy as np
+from pymilvus import Collection, Milvus
+from pymilvus.client.abstract import ChunkedQueryResult
 from pymilvus.client.types import DataType
 from pymilvus.orm.schema import CollectionSchema, FieldSchema
-from vectordb_orm.fields import EmbeddingField, VarCharField, BaseField, PrimaryKeyField
-from vectordb_orm.indexes import FLOATING_INDEXES, BINARY_INDEXES
-from typing import Any
-from vectordb_orm.attributes import AttributeCompare
 
-from pymilvus.client.abstract import ChunkedQueryResult
+from vectordb_orm.attributes import AttributeCompare
+from vectordb_orm.backends.base import BackendBase
+from vectordb_orm.backends.milvus.indexes import (BINARY_INDEXES,
+                                                  FLOATING_INDEXES)
+from vectordb_orm.base import VectorSchemaBase
+from vectordb_orm.fields import (BaseField, EmbeddingField, PrimaryKeyField,
+                                 VarCharField)
 from vectordb_orm.results import QueryResult
+
 
 class MilvusBackend(BackendBase):
     # https://milvus.io/docs/search.md
@@ -101,6 +100,10 @@ class MilvusBackend(BackendBase):
         if schema.consistency_type() is not None:
             optional_args["consistency_level"] = schema.consistency_type().value
 
+        # Milvus supports to different quering behaviors depending on whether or not we are looking
+        # for vector similarities
+        # A `search` is used when we are looking for vector similarities, and a `query` is used more akin
+        # to a traditional relational database when we're just looking to filter on metadata
         if search_embedding_key is not None:
             embedding_configuration : EmbeddingField = schema._type_configuration.get(search_embedding_key)
 
@@ -244,6 +247,11 @@ class MilvusBackend(BackendBase):
                 raise ValueError(f"Index type {field_index} is not compatible with binary vectors.")
             elif vector_type == DataType.FLOAT_VECTOR and not isinstance(field_index, tuple(FLOATING_INDEXES)):
                 raise ValueError(f"Index type {field_index} is not compatible with float vectors.")
+
+            # Milvus max size
+            # https://milvus.io/docs/limitations.md
+            if field_configuration.dim > 32768:
+                raise ValueError(f"Milvus only supports vectors with dimensions under 32768. {attribute_name} is too large: {field_configuration.dim}.")
 
     def _result_to_objects(
         self,

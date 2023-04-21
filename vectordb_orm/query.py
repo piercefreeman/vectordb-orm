@@ -1,8 +1,10 @@
-from vectordb_orm.backends.base import BackendBase
-from vectordb_orm.attributes import AttributeCompare
-from vectordb_orm.fields import EmbeddingField
-from vectordb_orm.base import VectorSchemaBase
 from typing import Any
+
+from vectordb_orm.attributes import AttributeCompare
+from vectordb_orm.backends.base import BackendBase
+from vectordb_orm.base import VectorSchemaBase
+from vectordb_orm.fields import EmbeddingField
+
 
 class VectorQueryBuilder:
     """
