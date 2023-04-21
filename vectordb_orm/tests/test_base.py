@@ -5,6 +5,7 @@ import numpy as np
 from time import sleep
 from vectordb_orm import VectorSchemaBase, EmbeddingField, PrimaryKeyField
 from vectordb_orm.indexes import IVF_FLAT
+from vectordb_orm.tests.conftest import SESSION_FIXTURE_KEYS
 
 def test_create_object():
     my_object = MyObject(text='example', embedding=np.array([1.0] * 128))
@@ -13,7 +14,10 @@ def test_create_object():
     assert my_object.id is None
 
 
-def test_insert_object(session: VectorSession):
+@pytest.mark.parametrize("session", SESSION_FIXTURE_KEYS)
+def test_insert_object(session: str, request):
+    session : VectorSession = request.getfixturevalue(session)
+
     my_object = MyObject(text='example', embedding=np.array([1.0] * 128))
     session.insert(my_object)
     assert my_object.id is not None
@@ -29,7 +33,10 @@ def test_insert_object(session: VectorSession):
     assert result.text == my_object.text
 
 
-def test_delete_object(session: VectorSession):
+@pytest.mark.parametrize("session", SESSION_FIXTURE_KEYS)
+def test_delete_object(session: str, request):
+    session : VectorSession = request.getfixturevalue(session)
+
     my_object = MyObject(text='example', embedding=np.array([1.0] * 128))
     session.insert(my_object)
 
@@ -50,7 +57,7 @@ def test_delete_object(session: VectorSession):
     assert len(results) == 0
 
 
-def test_invalid_typesignatures(session: VectorSession):
+def test_milvus_invalid_typesignatures(milvus_session: VectorSession):
     class TestInvalidObject(VectorSchemaBase):
         """
         An IVF_FLAT can't be used with a boolean embedding type
@@ -61,4 +68,4 @@ def test_invalid_typesignatures(session: VectorSession):
         embedding: np.ndarray[np.bool_] = EmbeddingField(dim=128, index=IVF_FLAT(cluster_units=128))
 
     with pytest.raises(ValueError, match="not compatible with binary vectors"):
-        session.create_collection(TestInvalidObject)
+        milvus_session.create_collection(TestInvalidObject)

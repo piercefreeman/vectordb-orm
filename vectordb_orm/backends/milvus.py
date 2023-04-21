@@ -19,12 +19,15 @@ from pymilvus.client.abstract import ChunkedQueryResult
 from vectordb_orm.results import QueryResult
 
 class MilvusBackend(BackendBase):
+    # https://milvus.io/docs/search.md
+    max_fetch_size = 16384
+
     def __init__(self, milvus_client: Milvus):
         self.client = milvus_client
 
     def create_collection(self, schema: Type[VectorSchemaBase]):
-        # Additional Milvus specific validation
         self._assert_embedding_validity(schema)
+        self._assert_has_primary(schema)
 
         fields: list[FieldSchema] = []
 
@@ -55,6 +58,12 @@ class MilvusBackend(BackendBase):
 
         return collection
 
+    def clear_collection(self, schema: Type[VectorSchemaBase]):
+        # Since Milvus can only delete entities by listing explicit primary keys,
+        # the most efficient way to clear the collection is to fully delete and recreate it
+        self.delete_collection(schema)
+        self.create_collection(schema)
+
     def delete_collection(self, schema: Type[VectorSchemaBase]):
         self.client.drop_collection(schema.collection_name())
 
@@ -66,7 +75,7 @@ class MilvusBackend(BackendBase):
 
     def delete(self, entity: VectorSchemaBase):
         schema = entity.__class__
-        identifier_key = schema._get_primary()
+        identifier_key = self._get_primary(schema)
         # Milvus only supports deleting entities with the `in` conditional; equality doesn't work
         delete_expression = f"{identifier_key} in [{entity.id}]"
         self.client.delete(collection_name=schema.collection_name(), expr=delete_expression)

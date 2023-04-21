@@ -82,21 +82,3 @@ class VectorSchemaBase(metaclass=VectorSchemaBaseMeta):
                 raise ValueError(f"Key `{attribute_name}` is not allowed on {cls.__name__}")
             setattr(obj, attribute_name, value)
         return obj
-
-    @classmethod
-    def _get_primary(cls):
-        """
-        If the class has a primary key, return it, otherwise return None
-        """
-        for attribute_name in cls.__annotations__.keys():
-            if isinstance(cls._type_configuration.get(attribute_name), PrimaryKeyField):
-                return attribute_name
-        return None
-
-    @classmethod
-    def _assert_has_primary(cls):
-        """
-        Ensure we have a primary key, this is the only field that's fully required
-        """
-        if cls._get_primary() is None:
-            raise ValueError(f"Class {cls.__name__} does not have a primary key, specify `PrimaryKeyField` on the class definition.")

@@ -40,4 +40,4 @@ jobs:
 
     - name: Run pytest
       run: |
-        poetry run pytest vectordb_orm
+        poetry run pytest -s vectordb_orm

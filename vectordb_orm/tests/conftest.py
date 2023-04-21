@@ -1,12 +1,14 @@
 import pytest
 from pymilvus import Milvus, connections
-from vectordb_orm import VectorSession, MilvusBackend
+from vectordb_orm import VectorSession, MilvusBackend, PineconeBackend
 from vectordb_orm.tests.models import MyObject, BinaryEmbeddingObject
 from time import sleep
+from os import getenv
+from dotenv import load_dotenv
 
 
 @pytest.fixture()
-def session():
+def milvus_session():
     session = VectorSession(MilvusBackend(Milvus()))
     connections.connect("default", host="localhost", port="19530")
 
@@ -21,3 +23,24 @@ def session():
     session.create_collection(BinaryEmbeddingObject)
 
     return session
+
+@pytest.fixture()
+def pinecone_session():
+    load_dotenv()
+    session = VectorSession(
+        PineconeBackend(
+            api_key=getenv("PINECONE_API_KEY"),
+            environment=getenv("PINECONE_ENVIRONMENT"),
+        )
+    )
+
+    # Wipe the previous collections
+    # Pinecone doesn't have the notion of binary objects like Milvus does, so we
+    # only create one object. Their free tier also doesn't support more than 1
+    # collection, so that's another limitation that encourages a single index here.
+    session.create_collection(MyObject)
+    session.clear_collection(MyObject)
+
+    return session
+
+SESSION_FIXTURE_KEYS = ["milvus_session", "pinecone_session"]

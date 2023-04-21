@@ -4,9 +4,6 @@ from vectordb_orm.fields import EmbeddingField
 from vectordb_orm.base import VectorSchemaBase
 from typing import Any
 
-# https://milvus.io/docs/search.md
-MAX_MILVUS_INT = 16384
-
 class VectorQueryBuilder:
     """
     Recursive query builder to allow for chaining of queries.
@@ -68,7 +65,9 @@ class VectorQueryBuilder:
         output_fields = self._get_output_fields()
         offset = self._offset if self._offset is not None else 0
         # Sum of limit and offset should be less than MAX_MILVUS_INT
-        limit = self._limit if self._limit is not None else (MAX_MILVUS_INT - offset)
+        #limit = self._limit if self._limit is not None else (MAX_MILVUS_INT - offset)
+        # TODO: offset is only relevant really for Milvus backends
+        limit = self._limit if self._limit is not None else (self.backend.max_fetch_size - offset)
 
         return self.backend.search(
             schema=self.cls,
