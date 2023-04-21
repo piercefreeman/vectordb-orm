@@ -8,21 +8,6 @@ Here are some simple examples demonstrating common behavior with vectordb-orm. F
 
 You create a class definition by subclassing `VectorSchemaBase` and providing typehints for the keys of your model, similar to pydantic. These fields also support custom initialization behavior if you want (or need) to modify their configuration options.
 
-Make sure to have a vector database running on your system before connecting. We provide an archive of the [official](https://milvus.io/docs/install_standalone-docker.md) docker-compose that's mainly used for testing Milvus. Pinecone requires your API key and environment parameters.
-
-```bash
-git clone https://github.com/piercefreeman/vectordb-orm.git
-cd vectordb-orm
-docker-compose up -d
-```
-
-| Field Type      | Description                                                                                                                                                                                                                                |
-|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| BaseField       | The `BaseField` provides the ability to add a default value for a given field. This should be used in cases where the more specific field types aren't relevant.                                                                           |
-| PrimaryKeyField | The `PrimaryKeyField` is used to specify the primary key of your model, and one is required per class.                                                                                                                                     |
-| VarCharField    | The `VarCharField` is used to specify a string field, and the `EmbeddingField` is used to specify a vector field.                                                                                                                          |
-| EmbeddingField  | The `EmbeddingField` also supports specifying an index type, which is used to specify the index type for the field. The `EmbeddingField` also supports specifying a dimension, which is used to specify the dimension of the vector field. |
-
 ### Object Definition
 
 Defining a schema is almost entirely the same between backends but there are some small differences when it comes to index creation.
@@ -53,28 +38,6 @@ class MyObject(VectorSchemaBase):
     id: int = PrimaryKeyField()
     text: str = VarCharField(max_length=128)
     embedding: np.ndarray = EmbeddingField(dim=128, index=PineconeIndex(metric_type=PineconeSimilarityMetric.COSINE))
-```
-
-## Embedding Types
-
-We currently support two different types of embeddings: floating point and binary. We distinguish these based on the type signatures of the embedding array.
-
-For binary:
-
-```python
-embedding: np.ndarray[np.bool_] = EmbeddingField(
-    dim=128,
-    index=FLAT()
-)
-```
-
-For floating point:
-
-```python
-embedding: np.ndarray = EmbeddingField(
-    dim=128,
-    index=BIN_FLAT()
-)
 ```
 
 ## Querying Syntax
@@ -109,12 +72,52 @@ query_vector = np.array([8.0]*128)
 results = session.query(MyObject).filter(MyObject.text == 'bar').order_by_similarity(MyObject.embedding, query_vector).limit(2).all()
 ```
 
+## Embedding Types
+
+We currently support two different types of embeddings: floating point and binary. We distinguish these based on the type signatures of the embedding array.
+
+For binary:
+
+```python
+embedding: np.ndarray[np.bool_] = EmbeddingField(
+    dim=128,
+    index=FLAT()
+)
+```
+
+For floating point:
+
+```python
+embedding: np.ndarray = EmbeddingField(
+    dim=128,
+    index=BIN_FLAT()
+)
+```
+
+## Field Types
+
+
+| Field Type      | Description                                                                                                                                                                                                                                |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| BaseField       | The `BaseField` provides the ability to add a default value for a given field. This should be used in cases where the more specific field types aren't relevant.                                                                           |
+| PrimaryKeyField | The `PrimaryKeyField` is used to specify the primary key of your model, and one is required per class.                                                                                                                                     |
+| VarCharField    | The `VarCharField` is used to specify a string field, and the `EmbeddingField` is used to specify a vector field.                                                                                                                          |
+| EmbeddingField  | The `EmbeddingField` also supports specifying an index type, which is used to specify the index type for the field. The `EmbeddingField` also supports specifying a dimension, which is used to specify the dimension of the vector field. |
+
 ## Installation
 
 To get started with vectordb-orm, simply install the package and its dependencies, then import the necessary modules:
 
 ```bash
 pip install vectordb-orm
+```
+
+Make sure to have a vector database running on your system before connecting. We provide an archive of the [official](https://milvus.io/docs/install_standalone-docker.md) docker-compose that's mainly used for testing Milvus. Pinecone requires your API key and environment parameters.
+
+```bash
+git clone https://github.com/piercefreeman/vectordb-orm.git
+cd vectordb-orm
+docker-compose up -d
 ```
 
 We use poetry for local development work:
