@@ -40,7 +40,22 @@ class MyObject(VectorSchemaBase):
     embedding: np.ndarray = EmbeddingField(dim=128, index=PineconeIndex(metric_type=PineconeSimilarityMetric.COSINE))
 ```
 
-## Querying Syntax
+### Querying Syntax
+
+```python
+session = VectorSession(...)
+
+# Perform a simple boolean query
+results = session.query(MyObject).filter(MyObject.text == 'bar').limit(2).all()
+
+# Rank results by their similarity to a given reference vector
+query_vector = np.array([8.0]*128)
+results = session.query(MyObject).filter(MyObject.text == 'bar').order_by_similarity(MyObject.embedding, query_vector).limit(2).all()
+```
+
+### Session Creation
+
+Milvus:
 
 ```python
 from pymilvus import Milvus, connections
@@ -50,6 +65,8 @@ from vectordb_orm import MilvusBackend, VectorSession
 session = VectorSession(MilvusBackend(Milvus()))
 connections.connect("default", host="localhost", port="19530")
 ```
+
+Pinecone:
 
 ```python
 from vectordb_orm import PineconeBackend, VectorSession
@@ -61,15 +78,6 @@ session = VectorSession(
         environment=getenv("PINECONE_ENVIRONMENT"),
     )
 )
-```
-
-```python
-# Perform a simple boolean query
-results = session.query(MyObject).filter(MyObject.text == 'bar').limit(2).all()
-
-# Rank results by their similarity to a given reference vector
-query_vector = np.array([8.0]*128)
-results = session.query(MyObject).filter(MyObject.text == 'bar').order_by_similarity(MyObject.embedding, query_vector).limit(2).all()
 ```
 
 ## Embedding Types
