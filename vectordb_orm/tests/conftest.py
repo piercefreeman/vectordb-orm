@@ -1,37 +1,58 @@
-import pytest
-from pymilvus import Milvus, connections
-from vectordb_orm import MilvusSession
-from vectordb_orm.tests.models import MyObject, BinaryEmbeddingObject
+from os import getenv
 from time import sleep
 
-@pytest.fixture()
-def milvus_client():
-    return Milvus()
+import pytest
+from dotenv import load_dotenv
+from pymilvus import Milvus, connections
+
+from vectordb_orm import MilvusBackend, PineconeBackend, VectorSession
+from vectordb_orm.tests.models import MilvusBinaryEmbeddingObject, MilvusMyObject, PineconeMyObject
+
 
 @pytest.fixture()
-def session(milvus_client):
-    session = MilvusSession(milvus_client)
+def milvus_session():
+    session = VectorSession(MilvusBackend(Milvus()))
     connections.connect("default", host="localhost", port="19530")
+
+    # Wipe the previous collections
+    session.delete_collection(MilvusMyObject)
+    session.delete_collection(MilvusBinaryEmbeddingObject)
+
+    # Flush
+    sleep(1)
+
+    session.create_collection(MilvusMyObject)
+    session.create_collection(MilvusBinaryEmbeddingObject)
+
     return session
 
 @pytest.fixture()
-def collection(session: MilvusSession, milvus_client: Milvus):
-    # Wipe the collection
-    milvus_client.drop_collection(MyObject.collection_name())
+def pinecone_session():
+    load_dotenv()
+    session = VectorSession(
+        PineconeBackend(
+            api_key=getenv("PINECONE_API_KEY"),
+            environment=getenv("PINECONE_ENVIRONMENT"),
+        )
+    )
 
-    # Flush
-    sleep(1)
+    # Wipe the previous collections
+    # Pinecone doesn't have the notion of binary objects like Milvus does, so we
+    # only create one object. Their free tier also doesn't support more than 1
+    # collection, so that's another limitation that encourages a single index here.
+    session.create_collection(PineconeMyObject)
+    session.clear_collection(PineconeMyObject)
 
-    # Create a new default one
-    return MyObject._create_collection(milvus_client)
+    return session
 
-@pytest.fixture()
-def binary_collection(session: MilvusSession, milvus_client: Milvus):
-    # Wipe the collection
-    milvus_client.drop_collection(BinaryEmbeddingObject.collection_name())
-
-    # Flush
-    sleep(1)
-
-    # Create a new default one
-    return BinaryEmbeddingObject._create_collection(milvus_client)
+SESSION_FIXTURE_KEYS = ["milvus_session", "pinecone_session"]
+SESSION_MODEL_PAIRS = [
+    (
+        "milvus_session",
+        MilvusMyObject,
+    ),
+    (
+        "pinecone_session",
+        PineconeMyObject,
+    ),
+]

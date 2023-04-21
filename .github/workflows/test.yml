@@ -39,5 +39,8 @@ jobs:
         poetry install
 
     - name: Run pytest
+      env:
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        PINECONE_ENVIRONMENT: ${{ secrets.PINECONE_ENVIRONMENT }}
       run: |
-        poetry run pytest vectordb_orm
+        poetry run pytest -s vectordb_orm

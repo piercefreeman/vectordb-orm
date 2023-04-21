@@ -1,6 +1,14 @@
-from vectordb_orm.base import MilvusBase
-from vectordb_orm.fields import EmbeddingField, VarCharField, PrimaryKeyField
-from vectordb_orm.session import MilvusSession
-from vectordb_orm.indexes import FLAT, IVF_FLAT, IVF_SQ8, IVF_PQ, HNSW, BIN_FLAT, BIN_IVF_FLAT
-from vectordb_orm.similarity import ConsistencyType
-from pymilvus import Milvus
+from vectordb_orm.backends.milvus.indexes import (Milvus_BIN_FLAT,
+                                                  Milvus_BIN_IVF_FLAT,
+                                                  Milvus_FLAT, Milvus_HNSW,
+                                                  Milvus_IVF_FLAT,
+                                                  Milvus_IVF_PQ,
+                                                  Milvus_IVF_SQ8)
+from vectordb_orm.backends.milvus.milvus import MilvusBackend
+from vectordb_orm.backends.pinecone.indexes import (PineconeIndex,
+                                                    PineconeSimilarityMetric)
+from vectordb_orm.backends.pinecone.pinecone import PineconeBackend
+from vectordb_orm.base import VectorSchemaBase
+from vectordb_orm.enums import ConsistencyType
+from vectordb_orm.fields import EmbeddingField, PrimaryKeyField, VarCharField
+from vectordb_orm.session import VectorSession

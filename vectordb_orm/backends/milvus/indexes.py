@@ -1,7 +1,11 @@
 from abc import ABC, abstractmethod
-from vectordb_orm.similarity import FloatSimilarityMetric, BinarySimilarityMetric
 
-class IndexBase(ABC):
+from vectordb_orm.backends.milvus.similarity import (
+    MilvusBinarySimilarityMetric, MilvusFloatSimilarityMetric)
+from vectordb_orm.index import IndexBase
+
+
+class MilvusIndexBase(IndexBase):
     """
     Specify indexes used for embedding creation: https://milvus.io/docs/index.md
     Individual docstrings for the index types are taken from this page of ideal scenarios.
@@ -11,14 +15,14 @@ class IndexBase(ABC):
 
     def __init__(
         self,
-        metric_type: FloatSimilarityMetric | BinarySimilarityMetric | None = None,
+        metric_type: MilvusFloatSimilarityMetric | MilvusBinarySimilarityMetric | None = None,
     ):
         # Choose a reasonable default if metric_type is null, depending on the type of index
         if metric_type is None:
             if isinstance(self, tuple(FLOATING_INDEXES)):
-                metric_type = FloatSimilarityMetric.L2
+                metric_type = MilvusFloatSimilarityMetric.L2
             elif isinstance(self, tuple(BINARY_INDEXES)):
-                metric_type = BinarySimilarityMetric.JACCARD
+                metric_type = MilvusBinarySimilarityMetric.JACCARD
 
         self._assert_metric_type(metric_type)
         self.metric_type = metric_type
@@ -35,17 +39,17 @@ class IndexBase(ABC):
         """
         pass
 
-    def _assert_metric_type(self, metric_type: FloatSimilarityMetric | BinarySimilarityMetric):
+    def _assert_metric_type(self, metric_type: MilvusFloatSimilarityMetric | MilvusBinarySimilarityMetric):
         """
         Binary indexes only support binary metrics, and floating indexes only support floating metrics. Assert
         that the combination of metric type and index is valid.
 
         """
         # Only support valid combinations of metric type and index
-        if isinstance(metric_type, FloatSimilarityMetric):
+        if isinstance(metric_type, MilvusFloatSimilarityMetric):
             if not isinstance(self, tuple(FLOATING_INDEXES)):
                 raise ValueError(f"Index type {self} is not supported for metric type {metric_type}")
-        elif isinstance(metric_type, BinarySimilarityMetric):
+        elif isinstance(metric_type, MilvusBinarySimilarityMetric):
             if not isinstance (self, tuple(BINARY_INDEXES)):
                 raise ValueError(f"Index type {self} is not supported for metric type {metric_type}")
 
@@ -55,7 +59,7 @@ class IndexBase(ABC):
         if inference_comparison is not None and not (inference_comparison >= 1 and inference_comparison <= cluster_units):
             raise ValueError("inference_comparison must be between 1 and cluster_units")
 
-class FLAT(IndexBase):
+class Milvus_FLAT(MilvusIndexBase):
     """
     - Relatively small dataset
     - Requires a 100% recall rate
@@ -69,7 +73,7 @@ class FLAT(IndexBase):
         return {"metric_type": self.metric_type.name}
 
 
-class IVF_FLAT(IndexBase):
+class Milvus_IVF_FLAT(MilvusIndexBase):
     """
     - High-speed query
     - Requires a recall rate as high as possible
@@ -80,7 +84,7 @@ class IVF_FLAT(IndexBase):
         self,
         cluster_units: int,
         inference_comparison: int | None = None,
-        metric_type: FloatSimilarityMetric | BinarySimilarityMetric | None = None,
+        metric_type: MilvusFloatSimilarityMetric | MilvusBinarySimilarityMetric | None = None,
     ):
         """
         :param cluster_units: Number of clusters (nlist in the docs)
@@ -101,7 +105,7 @@ class IVF_FLAT(IndexBase):
         return {"nprobe": self.nprobe}
 
 
-class IVF_SQ8(IndexBase):
+class Milvus_IVF_SQ8(MilvusIndexBase):
     """
     - High-speed query
     - Limited memory resources
@@ -113,7 +117,7 @@ class IVF_SQ8(IndexBase):
         self,
         cluster_units: int,
         inference_comparison: int | None = None,
-        metric_type: FloatSimilarityMetric | BinarySimilarityMetric | None = None,
+        metric_type: MilvusFloatSimilarityMetric | MilvusBinarySimilarityMetric | None = None,
     ):
         """
         :param cluster_units: Number of clusters (nlist in the docs)
@@ -134,7 +138,7 @@ class IVF_SQ8(IndexBase):
         return {"nprobe": self.nprobe}
 
 
-class IVF_PQ(IndexBase):
+class Milvus_IVF_PQ(MilvusIndexBase):
     """
     - Very high-speed query
     - Limited memory resources
@@ -148,7 +152,7 @@ class IVF_PQ(IndexBase):
         product_quantization: int | None = None,
         inference_comparison: int | None = None,
         low_dimension_bits: int | None = None,
-        metric_type: FloatSimilarityMetric | BinarySimilarityMetric | None = None,
+        metric_type: MilvusFloatSimilarityMetric | MilvusBinarySimilarityMetric | None = None,
     ):
         """
         :param cluster_units: Number of clusters (nlist in the docs)
@@ -175,7 +179,7 @@ class IVF_PQ(IndexBase):
         if low_dimension_bits is not None and not (low_dimension_bits >= 1 and low_dimension_bits <= 16):
             raise ValueError("low_dimension_bits must be between 1 and 16")
 
-class HNSW(IndexBase):
+class Milvus_HNSW(MilvusIndexBase):
     """
     - High-speed query
     - Requires a recall rate as high as possible
@@ -188,7 +192,7 @@ class HNSW(IndexBase):
         max_degree: int,
         search_scope_index: int,
         search_scope_inference: int,
-        metric_type: FloatSimilarityMetric | BinarySimilarityMetric | None = None,
+        metric_type: MilvusFloatSimilarityMetric | MilvusBinarySimilarityMetric | None = None,
     ):
         """
         :param max_degree: Maximum degree of the node
@@ -225,7 +229,7 @@ class HNSW(IndexBase):
             raise ValueError("search_scope must be between 1 and 32768")
 
 
-class BIN_FLAT(IndexBase):
+class Milvus_BIN_FLAT(MilvusIndexBase):
     """
     - Relatively small dataset
     - Requires a 100% recall rate
@@ -239,7 +243,7 @@ class BIN_FLAT(IndexBase):
         return {"metric_type": self.metric_type.name}
 
 
-class BIN_IVF_FLAT(IndexBase):
+class Milvus_BIN_IVF_FLAT(MilvusIndexBase):
     """
     - High-speed query
     - Requires a recall rate as high as possible
@@ -250,7 +254,7 @@ class BIN_IVF_FLAT(IndexBase):
         self,
         cluster_units: int,
         inference_comparison: int | None = None,
-        metric_type: FloatSimilarityMetric | BinarySimilarityMetric | None = None,
+        metric_type: MilvusFloatSimilarityMetric | MilvusBinarySimilarityMetric | None = None,
     ):
         """
         :param cluster_units: Number of clusters (nlist in the docs)
@@ -271,5 +275,5 @@ class BIN_IVF_FLAT(IndexBase):
         return {"nprobe": self.nprobe, "metric_type": self.metric_type.name}
 
 
-FLOATING_INDEXES : set[IndexBase] = {FLAT, IVF_FLAT, IVF_SQ8, IVF_PQ, HNSW}
-BINARY_INDEXES : set[IndexBase] = {BIN_FLAT, BIN_IVF_FLAT}
+FLOATING_INDEXES : set[MilvusIndexBase] = {Milvus_FLAT, Milvus_IVF_FLAT, Milvus_IVF_SQ8, Milvus_IVF_PQ, Milvus_HNSW}
+BINARY_INDEXES : set[MilvusIndexBase] = {Milvus_BIN_FLAT, Milvus_BIN_IVF_FLAT}

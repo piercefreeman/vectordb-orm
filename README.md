@@ -1,12 +1,14 @@
 # vectordb-orm
 
-`vectordb-orm` is an Object-Relational Mapping (ORM) library designed to work with vector databases. It currently supports Milvus, which is a blazing fast vector search library. This project aims to provide a consistent and convenient interface for working with vector data, allowing you to interact with vector databases using familiar ORM concepts and syntax. More backend engines are planned.
+`vectordb-orm` is an Object-Relational Mapping (ORM) library designed to work with vector databases. This project aims to provide a consistent and convenient interface for working with vector data, allowing you to interact with vector databases using familiar ORM concepts and syntax. Right now [Milvus](https://milvus.io/) and [Pinecone](https://www.pinecone.io/) are supported with more backend engines planned for the future.
 
 ## Getting Started
 
-Here are some example code snippets demonstrating common behavior with vectordb-orm. vectordb-orm is designed around python typehints. You create a class definition by subclassing `MilvusBase` and providing typehints for the keys of your model, similar to pydantic. These fields also support custom initialization behavior if you want (or need) to modify their configuration options.
+Here are some simple examples demonstrating common behavior with vectordb-orm. First a note on structure. vectordb-orm is designed around the idea of a `Schema`, which is logically equivalent to a table in classic relational databases. This schema is marked up with python typehints that define the type of vector and metadata that will be stored alongisde the objects.
 
-Make sure to have a Milvus agent running on your system before connecting. We provide an archive of the [official](https://milvus.io/docs/install_standalone-docker.md) docker-compose that's mainly used for testing.
+You create a class definition by subclassing `VectorSchemaBase` and providing typehints for the keys of your model, similar to pydantic. These fields also support custom initialization behavior if you want (or need) to modify their configuration options.
+
+Make sure to have a vector database running on your system before connecting. We provide an archive of the [official](https://milvus.io/docs/install_standalone-docker.md) docker-compose that's mainly used for testing Milvus. Pinecone requires your API key and environment parameters.
 
 ```bash
 git clone https://github.com/piercefreeman/vectordb-orm.git
@@ -23,17 +25,34 @@ docker-compose up -d
 
 ### Object Definition
 
+Defining a schema is almost entirely the same between backends but there are some small differences when it comes to index creation.
+
+Milvus:
+
 ```python
-from vectordb_orm import MilvusBase, EmbeddingField, VarCharField, PrimaryKeyField
-from vectordb_orm.indexes import IVF_FLAT
+from vectordb_orm import VectorSchemaBase, EmbeddingField, VarCharField, PrimaryKeyField, Milvus_IVF_FLAT
 import numpy as np
 
-class MyObject(MilvusBase):
+class MyObject(VectorSchemaBase):
     __collection_name__ = 'my_object_collection'
 
     id: int = PrimaryKeyField()
     text: str = VarCharField(max_length=128)
-    embedding: np.ndarray = EmbeddingField(dim=128, index=IVF_FLAT(cluster_units=128))
+    embedding: np.ndarray = EmbeddingField(dim=128, index=Milvus_IVF_FLAT(cluster_units=128))
+```
+
+Pinecone:
+
+```python
+from vectordb_orm import VectorSchemaBase, EmbeddingField, VarCharField, PrimaryKeyField, PineconeIndex, PineconeSimilarityMetric
+import numpy as np
+
+class MyObject(VectorSchemaBase):
+    __collection_name__ = 'my_object_collection'
+
+    id: int = PrimaryKeyField()
+    text: str = VarCharField(max_length=128)
+    embedding: np.ndarray = EmbeddingField(dim=128, index=PineconeIndex(metric_type=PineconeSimilarityMetric.COSINE))
 ```
 
 ## Embedding Types
@@ -61,11 +80,27 @@ embedding: np.ndarray = EmbeddingField(
 ## Querying Syntax
 
 ```python
-from vectordb_orm import MilvusSession
+from pymilvus import Milvus, connections
+from vectordb_orm import MilvusBackend, VectorSession
 
-# Instantiate a MilvusSession
-session = MilvusSession()
+# Instantiate a Milvus session
+session = VectorSession(MilvusBackend(Milvus()))
+connections.connect("default", host="localhost", port="19530")
+```
 
+```python
+from vectordb_orm import PineconeBackend, VectorSession
+
+# Instantiate a Pinecone session
+session = VectorSession(
+    PineconeBackend(
+        api_key=getenv("PINECONE_API_KEY"),
+        environment=getenv("PINECONE_ENVIRONMENT"),
+    )
+)
+```
+
+```python
 # Perform a simple boolean query
 results = session.query(MyObject).filter(MyObject.text == 'bar').limit(2).all()
 

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from vectordb_orm.base import MilvusBase
@@ -7,15 +7,15 @@ if TYPE_CHECKING:
 
 class OperationType(Enum):
     """
-    Values of the operation type should correspond to the operators used in the Milvus query language
+    Types fo comparison supported by our querying language
 
     """
-    EQUALS = '=='
-    GREATER_THAN = '>'
-    LESS_THAN = '<'
-    LESS_THAN_EQUAL = '<='
-    GREATER_THAN_EQUAL = '>='
-    NOT_EQUAL = '!='
+    EQUALS = 'EQUALS'
+    GREATER_THAN = 'GREATER_THAN'
+    LESS_THAN = 'LESS_THAN'
+    LESS_THAN_EQUAL = 'LESS_THAN_EQUAL'
+    GREATER_THAN_EQUAL = 'GREATER_THAN_EQUAL'
+    NOT_EQUAL = 'NOT_EQUAL'
 
 
 class AttributeCompare:
@@ -45,10 +45,3 @@ class AttributeCompare:
 
     def __ge__(self, other):
         return AttributeCompare(self.base_cls, self.attr, other, OperationType.GREATER_THAN_EQUAL)
-
-    def to_expression(self):
-        value = self.value
-        if isinstance(value, str):
-            value = f"\"{self.value}\""
-
-        return f"{self.attr} {self.op.value} {value}"

@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from vectordb_orm.base import MilvusBase
+    from vectordb_orm.base import VectorSchemaBase
 
 @dataclass
 class QueryResult:
-    result: "MilvusBase"
+    result: "VectorSchemaBase"
 
     # Score and distance is only returned for queries requesting vector-similarity
-    score: float | None = None
-    distance: float | None = None
+    score: Optional[float] = None
+    distance: Optional[float] = None
