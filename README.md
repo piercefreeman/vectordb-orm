@@ -10,7 +10,7 @@ You create a class definition by subclassing `VectorSchemaBase` and providing ty
 
 ### Object Definition
 
-Defining a schema is almost entirely the same between backends but there are some small differences when it comes to index creation.
+Defining a schema is almost entirely the same between backends but there are some small differences when it comes to index creation. In the below example the Milvus schema requires a Milvus index like `Milvus_IVF_FLAT` (for the full list of supported values see [here](./tree/main/vectordb_orm/backends/milvus/indexes.py)) and the Pinecone schema uses the default `PineconeIndex` with a cosine similarity metric.
 
 Milvus:
 
