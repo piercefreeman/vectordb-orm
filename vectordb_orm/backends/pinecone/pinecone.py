@@ -23,6 +23,14 @@ class PineconeBackend(BackendBase):
         api_key: str,
         environment: str
     ):
+        # Pinecone can't accept quotes in either parameters, and these are sometimes
+        # unintentionally included in env variables
+        # We quit before initializing with a more informative error message
+        if "'" in api_key or '"' in api_key:
+            raise ValueError("Pinecone `api_key` contains single or double quotes, which isn't allowed.")
+        if "'" in environment or '"' in environment:
+            raise ValueError("Pinecone `environment` contains single or double quotes, which isn't allowed.")
+
         pinecone.init(
             api_key=api_key,
             environment=environment,
