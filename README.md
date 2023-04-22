@@ -64,6 +64,7 @@ from vectordb_orm import MilvusBackend, VectorSession
 # Instantiate a Milvus session
 session = VectorSession(MilvusBackend(Milvus()))
 connections.connect("default", host="localhost", port="19530")
+session.create_collection(MyObject)
 ```
 
 Pinecone:
@@ -78,6 +79,7 @@ session = VectorSession(
         environment=getenv("PINECONE_ENVIRONMENT"),
     )
 )
+session.create_collection(MyObject)
 ```
 
 ## Embedding Types
