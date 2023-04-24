@@ -53,7 +53,12 @@ class VectorSchemaBase(metaclass=VectorSchemaBaseMeta):
         for key in cls.__annotations__.keys():
             attribute_value = getattr(cls, key)
             cls._type_configuration[key] = attribute_value if isinstance(attribute_value, BaseField) else None
-            delattr(cls, key)
+            # All attributes will result in some value because we return a AttributeCompare by default
+            # for non-configured objects. Checking that the field is actually equal to a base
+            # value allows us to only delete legitimate configuration objects. Otherwise attempting to delete
+            # the synthetic AttributeCompare object will throw an error.
+            if isinstance(attribute_value, BaseField):
+                delattr(cls, key)
 
     @classmethod
     def collection_name(self) -> str:
