@@ -126,6 +126,9 @@ class PineconeBackend(BackendBase):
 
         return id
 
+    def insert_batch(self, entities: list[VectorSchemaBase]) -> list[int]:
+        raise NotImplementedError
+
     def delete(self, entity: VectorSchemaBase):
         schema = entity.__class__
         collection_name = self.transform_collection_name(schema.collection_name())

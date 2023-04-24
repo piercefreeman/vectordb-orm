@@ -29,6 +29,10 @@ class BackendBase(ABC):
         pass
 
     @abstractmethod
+    def insert_batch(self, entities: list[VectorSchemaBase]) -> list[int]:
+        pass
+
+    @abstractmethod
     def delete(self, entity: VectorSchemaBase):
         pass
 

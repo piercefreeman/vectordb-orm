@@ -6,6 +6,7 @@ from pymilvus import Collection, Milvus
 from pymilvus.client.abstract import ChunkedQueryResult
 from pymilvus.client.types import DataType
 from pymilvus.orm.schema import CollectionSchema, FieldSchema
+from collections import defaultdict
 
 from vectordb_orm.attributes import AttributeCompare, OperationType
 from vectordb_orm.backends.base import BackendBase
@@ -71,6 +72,69 @@ class MilvusBackend(BackendBase):
         print("Entity insertion", entities)
         mutation_result = self.client.insert(collection_name=entity.__class__.collection_name(), entities=entities)
         return mutation_result.primary_keys[0]
+
+    def insert_batch(self, entities: list[VectorSchemaBase]) -> list[int]:
+        # Group by the schema type since we allow for the insertion of multiple different schema
+        # `schema_to_objects` - build up the object representation, parameterized by object keys
+        # `schema_to_types` - cache the object key : schema type mapping
+        # `schema_to_original_index` - since we switch to a per-schema representation, keep track of a mapping
+        #    from the schema to the original index in `entities`
+        # `schema_ignore` - per schema, what keys to ignore
+        schema_to_objects = defaultdict(lambda: defaultdict(list))
+        schema_to_types = defaultdict(dict)
+        schema_to_original_index = defaultdict(list)
+        schema_ignore = defaultdict(set)
+
+        for i, entity in enumerate(entities):
+            schema = entity.__class__
+            schema_name = schema.collection_name()
+            schema_to_original_index[schema_name].append(i)
+
+            # The primary key should be null at this stage of things, so we ignore it
+            # during the insertion
+            schema_ignore[schema_name].add(self._get_primary(schema))
+
+            for attribute_name, type_hint in entity.__annotations__.items():
+                value = getattr(entity, attribute_name)
+                db_type, value = self._type_to_value(type_hint, value)
+                schema_to_types[schema_name][attribute_name] = db_type
+                schema_to_objects[schema_name][attribute_name].append(value)
+
+        # Ensure each key in `schema_to_objects` matches the quantity of objects
+        # that should have been created. This *shouldn't* happen but it's possible
+        # some combination of programatically deleting attributes or annotations will
+        # lead to this case. We proactively raise an error because this could result in
+        # data corruption.
+        for schema_name, by_key in schema_to_objects.items():
+            all_lengths = {len(values) for values in by_key.values()}
+            if len(all_lengths) > 1:
+                raise ValueError(f"Inserted objects don't align for schema `{schema_name}`")
+
+        schema_to_ids = {}
+
+        for schema_name, schema_definition in schema_to_types.items():
+            payload = []
+            for attribute_name, db_type in schema_definition.items():
+                if attribute_name in schema_ignore[schema_name]:
+                    continue
+                values = schema_to_objects[schema_name][attribute_name]
+                payload.append(
+                    {
+                        "name": attribute_name,
+                        "type": db_type,
+                        "values": values,
+                    }
+                )
+            mutation_result = self.client.insert(collection_name=schema_name, entities=payload)
+            schema_to_ids[schema_name] = mutation_result.primary_keys
+
+        # Reorder ids to match the input entities
+        ordered_ids = [None] * len(entities)
+        for schema_name, primary_keys in schema_to_ids.items():
+            for i, original_index in enumerate(schema_to_original_index[schema_name]):
+                ordered_ids[original_index] = primary_keys[i]
+
+        return ordered_ids
 
     def delete(self, entity: VectorSchemaBase):
         schema = entity.__class__
@@ -228,7 +292,13 @@ class MilvusBackend(BackendBase):
             value = getattr(entity, attribute_name)
             if value is not None:
                 db_type, value = self._type_to_value(type_hint, value)
-                payload.append({"name": attribute_name, "type": db_type, "values": [value]})
+                payload.append(
+                    {
+                        "name": attribute_name,
+                        "type": db_type,
+                        "values": [value]
+                    }
+                )
         return payload
 
     def _assert_embedding_validity(self, schema: Type[VectorSchemaBase]):

@@ -34,6 +34,36 @@ def test_insert_object(session: str, model: Type[VectorSchemaBase], request):
     result : model = results[0].result
     assert result.text == my_object.text
 
+@pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
+def test_insert_batch(session: str, model: Type[VectorSchemaBase], request):
+    session : VectorSession = request.getfixturevalue(session)
+
+    obj1 = model(text='example1', embedding=np.array([1.0] * 128))
+    obj2 = model(text='example2', embedding=np.array([2.0] * 128))
+    obj3 = model(text='example3', embedding=np.array([3.0] * 128))
+
+    session.insert_batch([obj1, obj2, obj3])
+
+    for obj in [obj1, obj2, obj3]:
+        assert obj.id is not None
+
+
+@pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
+def test_insert_batch_with_nulls(session: str, model: Type[VectorSchemaBase], request):
+    """
+    Test bulk insertion where some of the objects have null values in them
+    """
+    session : VectorSession = request.getfixturevalue(session)
+
+    obj1 = model(text='example1', embedding=np.array([1.0] * 128))
+    obj2 = model(text=None, embedding=np.array([2.0] * 128))
+    obj3 = model(text='example3', embedding=np.array([3.0] * 128))
+
+    session.insert_batch([obj1, obj2, obj3])
+
+    for obj in [obj1, obj2, obj3]:
+        assert obj.id is not None
+
 
 @pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
 def test_delete_object(session: str, model: Type[VectorSchemaBase],request):

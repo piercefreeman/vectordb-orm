@@ -27,10 +27,16 @@ class VectorSession:
     def delete_collection(self, schema: Type[VectorSchemaBase]):
         return self.backend.delete_collection(schema)
 
-    def insert(self, obj: VectorSchemaBase) -> int:
+    def insert(self, obj: VectorSchemaBase) -> VectorSchemaBase:
         new_id = self.backend.insert(obj)
         obj.id = new_id
         return obj
+
+    def insert_batch(self, objs: list[VectorSchemaBase]) -> list[VectorSchemaBase]:
+        new_ids = self.backend.insert_batch(objs)
+        for new_id, obj in zip(new_ids, objs):
+            obj.id = new_id
+        return objs
 
     def delete(self, obj: VectorSchemaBase) -> None:
         if not obj.id:
