@@ -84,3 +84,19 @@ def test_milvus_invalid_typesignatures(milvus_session: VectorSession):
 
     with pytest.raises(ValueError, match="not compatible with binary vectors"):
         milvus_session.create_collection(TestInvalidObject)
+
+
+def test_mixed_configuration_fields(milvus_session: VectorSession):
+    """
+    Confirm that schema definitions can mix typehints that have configuration values
+    and those that only have vanilla markup.
+
+    """
+    class TestMixedConfigurationObject(VectorSchemaBase):
+        __collection_name__ = 'mixed_configuration_collection'
+
+        id: int = PrimaryKeyField()
+        is_valid: bool
+        embedding: np.ndarray = EmbeddingField(dim=128, index=Milvus_IVF_FLAT(cluster_units=128))
+
+    milvus_session.create_collection(TestMixedConfigurationObject)
