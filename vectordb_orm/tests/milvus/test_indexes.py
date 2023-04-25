@@ -7,7 +7,8 @@ from pymilvus import Milvus
 from vectordb_orm import (EmbeddingField, PrimaryKeyField, VectorSchemaBase,
                           VectorSession)
 from vectordb_orm.backends.milvus.indexes import (BINARY_INDEXES,
-                                                  FLOATING_INDEXES, MilvusIndexBase)
+                                                  FLOATING_INDEXES,
+                                                  MilvusIndexBase)
 from vectordb_orm.backends.milvus.similarity import (
     MilvusBinarySimilarityMetric, MilvusFloatSimilarityMetric)
 

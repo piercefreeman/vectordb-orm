@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from pymilvus import Milvus, connections
 
 from vectordb_orm import MilvusBackend, PineconeBackend, VectorSession
-from vectordb_orm.tests.models import MilvusBinaryEmbeddingObject, MilvusMyObject, PineconeMyObject
+from vectordb_orm.tests.models import (MilvusBinaryEmbeddingObject,
+                                       MilvusMyObject, PineconeMyObject)
 
 
 @pytest.fixture()

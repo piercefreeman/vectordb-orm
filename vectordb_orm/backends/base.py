@@ -29,7 +29,7 @@ class BackendBase(ABC):
         pass
 
     @abstractmethod
-    def insert_batch(self, entities: list[VectorSchemaBase]) -> list[int]:
+    def insert_batch(self, entities: list[VectorSchemaBase], show_progress: bool) -> list[int]:
         pass
 
     @abstractmethod

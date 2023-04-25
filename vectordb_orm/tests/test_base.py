@@ -1,3 +1,5 @@
+from typing import Type
+
 import numpy as np
 import pytest
 
@@ -5,7 +7,6 @@ from vectordb_orm import (EmbeddingField, PrimaryKeyField, VectorSchemaBase,
                           VectorSession)
 from vectordb_orm.backends.milvus.indexes import Milvus_IVF_FLAT
 from vectordb_orm.tests.conftest import SESSION_MODEL_PAIRS
-from typing import Type
 
 
 @pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)

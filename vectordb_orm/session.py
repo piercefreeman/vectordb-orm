@@ -32,8 +32,8 @@ class VectorSession:
         obj.id = new_id
         return obj
 
-    def insert_batch(self, objs: list[VectorSchemaBase]) -> list[VectorSchemaBase]:
-        new_ids = self.backend.insert_batch(objs)
+    def insert_batch(self, objs: list[VectorSchemaBase], show_progress: bool = False) -> list[VectorSchemaBase]:
+        new_ids = self.backend.insert_batch(objs, show_progress=show_progress)
         for new_id, obj in zip(new_ids, objs):
             obj.id = new_id
         return objs

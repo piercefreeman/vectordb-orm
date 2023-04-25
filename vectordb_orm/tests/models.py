@@ -1,8 +1,9 @@
 import numpy as np
 
 from vectordb_orm import (ConsistencyType, EmbeddingField, Milvus_BIN_FLAT,
-                          Milvus_IVF_FLAT, PineconeIndex, PrimaryKeyField,
-                          VarCharField, VectorSchemaBase, PineconeSimilarityMetric)
+                          Milvus_IVF_FLAT, PineconeIndex,
+                          PineconeSimilarityMetric, PrimaryKeyField,
+                          VarCharField, VectorSchemaBase)
 
 
 class MilvusMyObject(VectorSchemaBase):

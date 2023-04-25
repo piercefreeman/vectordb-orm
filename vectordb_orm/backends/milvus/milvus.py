@@ -1,3 +1,4 @@
+from collections import defaultdict
 from logging import info
 from typing import Any, Type, get_args, get_origin
 
@@ -6,7 +7,6 @@ from pymilvus import Collection, Milvus
 from pymilvus.client.abstract import ChunkedQueryResult
 from pymilvus.client.types import DataType
 from pymilvus.orm.schema import CollectionSchema, FieldSchema
-from collections import defaultdict
 
 from vectordb_orm.attributes import AttributeCompare, OperationType
 from vectordb_orm.backends.base import BackendBase
@@ -73,7 +73,14 @@ class MilvusBackend(BackendBase):
         mutation_result = self.client.insert(collection_name=entity.__class__.collection_name(), entities=entities)
         return mutation_result.primary_keys[0]
 
-    def insert_batch(self, entities: list[VectorSchemaBase]) -> list[int]:
+    def insert_batch(
+        self,
+        entities: list[VectorSchemaBase],
+        show_progress: bool,
+    ) -> list[int]:
+        if show_progress:
+            raise ValueError("Milvus backend does not support batch insertion progress logging because it is done in one operation.")
+
         # Group by the schema type since we allow for the insertion of multiple different schema
         # `schema_to_entities` - input entities grouped by the schema name
         # `schema_to_original_index` - since we switch to a per-schema representation, keep track of a mapping

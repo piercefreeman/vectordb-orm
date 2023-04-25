@@ -1,3 +1,4 @@
+from collections import defaultdict
 from logging import info
 from re import match as re_match
 from typing import Type
@@ -5,15 +6,14 @@ from uuid import uuid4
 
 import numpy as np
 import pinecone
-from collections import defaultdict
+from tqdm import tqdm
 
-from vectordb_orm.attributes import AttributeCompare
+from vectordb_orm.attributes import AttributeCompare, OperationType
 from vectordb_orm.backends.base import BackendBase
 from vectordb_orm.backends.pinecone.indexes import PineconeIndex
 from vectordb_orm.base import VectorSchemaBase
 from vectordb_orm.fields import EmbeddingField
 from vectordb_orm.results import QueryResult
-from vectordb_orm.attributes import OperationType
 
 
 class PineconeBackend(BackendBase):
@@ -117,7 +117,12 @@ class PineconeBackend(BackendBase):
 
         return identifier
 
-    def insert_batch(self, entities: list[VectorSchemaBase], batch_size=100) -> list[int]:
+    def insert_batch(
+        self,
+        entities: list[VectorSchemaBase],
+        show_progress: bool,
+        batch_size: int = 100
+    ) -> list[int]:
         identifiers = [
             uuid4().int & (1<<64)-1
             for _ in range(len(entities))
@@ -143,7 +148,7 @@ class PineconeBackend(BackendBase):
             embedding_field_key, _ = self._get_embedding_field(schema)
             primary_key = self._get_primary(schema)
 
-            for i in range(0, len(original_indexes), batch_size):
+            for i in tqdm(range(0, len(original_indexes), batch_size)):
                 batch_indexes = original_indexes[i:i+batch_size]
                 batch_entities = [entities[index] for index in batch_indexes]
                 batch_identifiers = [identifiers[index] for index in batch_indexes]
