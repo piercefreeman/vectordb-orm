@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import numpy as np
 import pinecone
+from collections import defaultdict
 
 from vectordb_orm.attributes import AttributeCompare
 from vectordb_orm.backends.base import BackendBase
@@ -99,35 +100,67 @@ class PineconeBackend(BackendBase):
         schema = entity.__class__
         collection_name = self.transform_collection_name(schema.collection_name())
 
-        schema = entity.__class__
         embedding_field_key, _ = self._get_embedding_field(schema)
         primary_key = self._get_primary(schema)
 
-        id = uuid4().int & (1<<64)-1
-
-        embedding_value : np.ndarray = getattr(entity, embedding_field_key)
-        metadata_fields = {
-            key: getattr(entity, key)
-            for key in schema.__annotations__.keys()
-            if key not in {embedding_field_key, primary_key}
-        }
+        identifier = uuid4().int & (1<<64)-1
 
         index = pinecone.Index(index_name=collection_name)
         index.upsert([
-            (
-                str(id),
-                embedding_value.tolist(),
-                {
-                    **metadata_fields,
-                    primary_key: id,
-                }
-            ),
+            self._prepare_upsert_tuple(
+                entity,
+                identifier,
+                embedding_field_key=embedding_field_key,
+                primary_key=primary_key,
+            )
         ])
 
-        return id
+        return identifier
 
-    def insert_batch(self, entities: list[VectorSchemaBase]) -> list[int]:
-        raise NotImplementedError
+    def insert_batch(self, entities: list[VectorSchemaBase], batch_size=100) -> list[int]:
+        identifiers = [
+            uuid4().int & (1<<64)-1
+            for _ in range(len(entities))
+        ]
+
+        # Group by the objects
+        schema_to_original_index = defaultdict(list)
+        schema_to_class = {}
+
+        for i, entity in enumerate(entities):
+            schema = entity.__class__
+            schema_name = schema.collection_name()
+
+            schema_to_original_index[schema_name].append(i)
+            schema_to_class[schema_name] = schema
+
+        for schema_name, original_indexes in schema_to_original_index.items():
+            schema = schema_to_class[schema_name]
+            collection_name = self.transform_collection_name(schema.collection_name())
+
+            index = pinecone.Index(index_name=collection_name)
+
+            embedding_field_key, _ = self._get_embedding_field(schema)
+            primary_key = self._get_primary(schema)
+
+            for i in range(0, len(original_indexes), batch_size):
+                batch_indexes = original_indexes[i:i+batch_size]
+                batch_entities = [entities[index] for index in batch_indexes]
+                batch_identifiers = [identifiers[index] for index in batch_indexes]
+
+                index.upsert(
+                    [
+                        self._prepare_upsert_tuple(
+                            entity,
+                            identifier,
+                            embedding_field_key=embedding_field_key,
+                            primary_key=primary_key,
+                        )
+                        for entity, identifier in zip(batch_entities, batch_identifiers)
+                    ]
+                )
+
+        return identifiers
 
     def delete(self, entity: VectorSchemaBase):
         schema = entity.__class__
@@ -257,3 +290,31 @@ class PineconeBackend(BackendBase):
         return {
             operation_type_maps[attribute.op]: attribute.value
         }
+
+    def _prepare_upsert_tuple(
+        self,
+        entity: VectorSchemaBase,
+        identifier: int,
+        embedding_field_key: str,
+        primary_key: str,
+    ):
+        """
+        Formats a tuple for upsert
+        """
+        schema = entity.__class__
+
+        embedding_value : np.ndarray = getattr(entity, embedding_field_key)
+        metadata_fields = {
+            key: getattr(entity, key)
+            for key in schema.__annotations__.keys()
+            if key not in {embedding_field_key, primary_key}
+        }
+
+        return (
+            str(identifier),
+            embedding_value.tolist(),
+            {
+                **metadata_fields,
+                primary_key: identifier,
+            }
+        )

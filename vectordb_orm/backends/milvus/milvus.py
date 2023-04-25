@@ -79,7 +79,6 @@ class MilvusBackend(BackendBase):
         # `schema_to_original_index` - since we switch to a per-schema representation, keep track of a mapping
         #    from the schema to the original index in `entities`
         # `schema_to_ids` - map of schema to the resulting primary keys
-        schema_to_entities = defaultdict(list)
         schema_to_original_index = defaultdict(list)
         schema_to_class = {}
         schema_to_ids = {}
@@ -89,11 +88,11 @@ class MilvusBackend(BackendBase):
             schema_name = schema.collection_name()
 
             schema_to_original_index[schema_name].append(i)
-            schema_to_entities[schema_name].append(entity)
             schema_to_class[schema_name] = schema
 
-        for schema_name, schema_entities in schema_to_entities.items():
+        for schema_name, schema_indexes in schema_to_original_index.items():
             schema = schema_to_class[schema_name]
+            schema_entities = [entities[index] for index in schema_indexes]
 
             # The primary key should be null at this stage of things, so we ignore it
             # during the insertion
