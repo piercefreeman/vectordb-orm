@@ -81,10 +81,10 @@ class VectorSchemaBase(metaclass=VectorSchemaBaseMeta):
         :returns: A MilvusBase object.
         :raises ValueError: If an unexpected attribute name is encountered in the dictionary.
         """
-        obj = cls()
+        init_payload = {}
         allowed_keys = list(cls.__annotations__.keys())
         for attribute_name, value in data.items():
             if attribute_name not in allowed_keys:
                 raise ValueError(f"Key `{attribute_name}` is not allowed on {cls.__name__}")
-            setattr(obj, attribute_name, value)
-        return obj
+            init_payload[attribute_name] = value
+        return cls(**init_payload)

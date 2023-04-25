@@ -18,6 +18,19 @@ def test_create_object(session: str, model: Type[VectorSchemaBase]):
 
 
 @pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
+def test_from_dict(session: str, model: Type[VectorSchemaBase]):
+    my_object = model.from_dict(
+        {
+            "text": 'example',
+            "embedding": np.array([1.0] * 128)
+        }
+    )
+    assert my_object.text == 'example'
+    assert np.array_equal(my_object.embedding, np.array([1.0] * 128))
+    assert my_object.id is None
+
+
+@pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
 def test_insert_object(session: str, model: Type[VectorSchemaBase], request):
     session : VectorSession = request.getfixturevalue(session)
 
