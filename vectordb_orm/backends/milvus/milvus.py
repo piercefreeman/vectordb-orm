@@ -75,56 +75,62 @@ class MilvusBackend(BackendBase):
 
     def insert_batch(self, entities: list[VectorSchemaBase]) -> list[int]:
         # Group by the schema type since we allow for the insertion of multiple different schema
-        # `schema_to_objects` - build up the object representation, parameterized by object keys
-        # `schema_to_types` - cache the object key : schema type mapping
+        # `schema_to_entities` - input entities grouped by the schema name
         # `schema_to_original_index` - since we switch to a per-schema representation, keep track of a mapping
         #    from the schema to the original index in `entities`
-        # `schema_ignore` - per schema, what keys to ignore
-        schema_to_objects = defaultdict(lambda: defaultdict(list))
-        schema_to_types = defaultdict(dict)
+        # `schema_to_ids` - map of schema to the resulting primary keys
+        schema_to_entities = defaultdict(list)
         schema_to_original_index = defaultdict(list)
-        schema_ignore = defaultdict(set)
+        schema_to_class = {}
+        schema_to_ids = {}
 
         for i, entity in enumerate(entities):
             schema = entity.__class__
             schema_name = schema.collection_name()
+
             schema_to_original_index[schema_name].append(i)
+            schema_to_entities[schema_name].append(entity)
+            schema_to_class[schema_name] = schema
+
+        for schema_name, schema_entities in schema_to_entities.items():
+            schema = schema_to_class[schema_name]
 
             # The primary key should be null at this stage of things, so we ignore it
             # during the insertion
-            schema_ignore[schema_name].add(self._get_primary(schema))
+            ignore_keys = {
+                self._get_primary(schema)
+            }
 
-            for attribute_name, type_hint in entity.__annotations__.items():
-                value = getattr(entity, attribute_name)
-                db_type, value = self._type_to_value(type_hint, value)
-                schema_to_types[schema_name][attribute_name] = db_type
-                schema_to_objects[schema_name][attribute_name].append(value)
+            # Group this schema's objects by their keys
+            by_key_values = defaultdict(list)
+            by_key_type = {}
 
-        # Ensure each key in `schema_to_objects` matches the quantity of objects
-        # that should have been created. This *shouldn't* happen but it's possible
-        # some combination of programatically deleting attributes or annotations will
-        # lead to this case. We proactively raise an error because this could result in
-        # data corruption.
-        for schema_name, by_key in schema_to_objects.items():
-            all_lengths = {len(values) for values in by_key.values()}
+            for entity in schema_entities:
+                for attribute_name, type_hint in entity.__annotations__.items():
+                    value = getattr(entity, attribute_name)
+                    db_type, value = self._type_to_value(type_hint, value)
+                    by_key_values[attribute_name].append(value)
+                    by_key_type[attribute_name] = db_type
+
+            # Ensure each key in `schema_to_objects` matches the quantity of objects
+            # that should have been created. This *shouldn't* happen but it's possible
+            # some combination of programatically deleting attributes or annotations will
+            # lead to this case. We proactively raise an error because this could result in
+            # data corruption.
+            all_lengths = {len(values) for values in by_key_values.values()}
             if len(all_lengths) > 1:
                 raise ValueError(f"Inserted objects don't align for schema `{schema_name}`")
 
-        schema_to_ids = {}
+            payload = [
+                {
+                    "name": attribute_name,
+                    "type": by_key_type[attribute_name],
+                    "values": values,
+                }
+                for attribute_name, values in by_key_values.items()
+                if attribute_name not in ignore_keys
+            ]
 
-        for schema_name, schema_definition in schema_to_types.items():
-            payload = []
-            for attribute_name, db_type in schema_definition.items():
-                if attribute_name in schema_ignore[schema_name]:
-                    continue
-                values = schema_to_objects[schema_name][attribute_name]
-                payload.append(
-                    {
-                        "name": attribute_name,
-                        "type": db_type,
-                        "values": values,
-                    }
-                )
             mutation_result = self.client.insert(collection_name=schema_name, entities=payload)
             schema_to_ids[schema_name] = mutation_result.primary_keys
 
