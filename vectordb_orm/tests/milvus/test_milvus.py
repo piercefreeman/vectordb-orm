@@ -1,7 +1,9 @@
-from vectordb_orm.tests.models import MilvusBinaryEmbeddingObject
-import pytest
-from vectordb_orm import VectorSession
 import numpy as np
+import pytest
+
+from vectordb_orm import VectorSession
+from vectordb_orm.tests.models import MilvusBinaryEmbeddingObject
+
 
 # @pierce 04-21- 2023: Currently flaky
 # https://github.com/piercefreeman/vectordb-orm/pull/5

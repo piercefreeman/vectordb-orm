@@ -1,10 +1,12 @@
 # vectordb-orm
 
-`vectordb-orm` is an Object-Relational Mapping (ORM) library designed to work with vector databases. This project aims to provide a consistent and convenient interface for working with vector data, allowing you to interact with vector databases using familiar ORM concepts and syntax. Right now [Milvus](https://milvus.io/) and [Pinecone](https://www.pinecone.io/) are supported with more backend engines planned for the future.
+`vectordb-orm` is an Object-Relational Mapping (ORM) library for vector databases. Define your data as objects and query for them using familiar SQL syntax, with all the added power of lighting fast vector search.
+
+Right now [Milvus](https://milvus.io/) and [Pinecone](https://www.pinecone.io/) are supported with more backend engines planned for the future.
 
 ## Getting Started
 
-Here are some simple examples demonstrating common behavior with vectordb-orm. First a note on structure. vectordb-orm is designed around the idea of a `Schema`, which is logically equivalent to a table in classic relational databases. This schema is marked up with python typehints that define the type of vector and metadata that will be stored alongisde the objects.
+Here are some simple examples demonstrating common behavior with vectordb-orm. First a note on structure. vectordb-orm is designed around the idea of a `Schema`, which is logically equivalent to a table in classic relational databases. This schema is marked up with typehints that define the type of vector and metadata that will be stored alongisde the objects.
 
 You create a class definition by subclassing `VectorSchemaBase` and providing typehints for the keys of your model, similar to pydantic. These fields also support custom initialization behavior if you want (or need) to modify their configuration options.
 
@@ -39,6 +41,26 @@ class MyObject(VectorSchemaBase):
     text: str = VarCharField(max_length=128)
     embedding: np.ndarray = EmbeddingField(dim=128, index=PineconeIndex(metric_type=PineconeSimilarityMetric.COSINE))
 ```
+
+### Indexing Data
+
+To insert objects into the database, create a new instance of your object class and insert into the current session. The arguments to the init function mirror the typehinted schema that you defined above.
+
+```python
+obj = MyObject(text="my_text", embedding=np.array([1.0]*128))
+session.insert(obj)
+```
+
+Once inserted, this object will be populated with a new `id` by the database engine. At this point it should be queryable (modulo some backends taking time for eventual consistency across different shards).
+
+`vectordb-orm` also supports batch insertion. This is recommended in cases where you have a lot of data to insert at one time, since latencies can be significant on individual datapoints.
+
+```python
+obj = MyObject(text="my_text", embedding=np.array([1.0]*128))
+session.insert_batch([obj], show_progress=True)
+```
+
+The optional `show_progress` allows you to show a progress bar to show the current status of the insertion and the estimated time remaining for the whole dataset.
 
 ### Querying Syntax
 

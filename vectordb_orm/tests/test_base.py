@@ -1,3 +1,5 @@
+from typing import Type
+
 import numpy as np
 import pytest
 
@@ -5,7 +7,6 @@ from vectordb_orm import (EmbeddingField, PrimaryKeyField, VectorSchemaBase,
                           VectorSession)
 from vectordb_orm.backends.milvus.indexes import Milvus_IVF_FLAT
 from vectordb_orm.tests.conftest import SESSION_MODEL_PAIRS
-from typing import Type
 
 
 @pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
@@ -34,6 +35,18 @@ def test_insert_object(session: str, model: Type[VectorSchemaBase], request):
     result : model = results[0].result
     assert result.text == my_object.text
 
+@pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
+def test_insert_batch(session: str, model: Type[VectorSchemaBase], request):
+    session : VectorSession = request.getfixturevalue(session)
+
+    obj1 = model(text='example1', embedding=np.array([1.0] * 128))
+    obj2 = model(text='example2', embedding=np.array([2.0] * 128))
+    obj3 = model(text='example3', embedding=np.array([3.0] * 128))
+
+    session.insert_batch([obj1, obj2, obj3])
+
+    for obj in [obj1, obj2, obj3]:
+        assert obj.id is not None
 
 @pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
 def test_delete_object(session: str, model: Type[VectorSchemaBase],request):

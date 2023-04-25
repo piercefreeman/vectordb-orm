@@ -1,9 +1,10 @@
+from typing import Type
+
 import numpy as np
 import pytest
 
-from vectordb_orm import VectorSession, VectorSchemaBase
+from vectordb_orm import VectorSchemaBase, VectorSession
 from vectordb_orm.tests.conftest import SESSION_MODEL_PAIRS
-from typing import Type
 
 
 @pytest.mark.parametrize("session,model", SESSION_MODEL_PAIRS)
